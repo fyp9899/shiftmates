@@ -2,40 +2,45 @@ const mysql = require('mysql2');
 const dotenv = require('dotenv');
 const path = require('path');
 
-// Load .env from root directory - with explicit path
-const envPath = path.join(__dirname, '../.env');
-console.log('Loading .env from:', envPath);
+// Load environment variables
+dotenv.config({ path: path.join(__dirname, '../.env') });
 
-const result = dotenv.config({ path: envPath });
-
-if (result.error) {
-    console.error('Error loading .env file:', result.error);
-} else {
-    console.log('.env file loaded successfully');
-    console.log('ADMIN_USERNAME from env:', process.env.ADMIN_USERNAME);
-    console.log('ADMIN_PASSWORD from env:', process.env.ADMIN_PASSWORD ? '***set***' : 'not set');
-}
-
+// Create connection pool for Aiven MySQL with SSL
 const pool = mysql.createPool({
-    host: process.env.DB_HOST || 'localhost',
-    user: process.env.DB_USER || 'root',
-    password: process.env.DB_PASSWORD || 'askarikazmi123',
-    database: process.env.DB_NAME || 'shiftmates',
+    host: process.env.DB_HOST,
+    port: parseInt(process.env.DB_PORT) || 3306,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_NAME,
+    ssl: {
+        rejectUnauthorized: false  // Required for Aiven
+    },
     waitForConnections: true,
     connectionLimit: 10,
-    queueLimit: 0
+    queueLimit: 0,
+    connectTimeout: 30000,
+    enableKeepAlive: true
 });
 
 const promisePool = pool.promise();
 
-// Test database connection
-promisePool.getConnection()
-    .then(connection => {
-        console.log('Database connected successfully');
+// Test the connection immediately
+(async () => {
+    try {
+        const connection = await promisePool.getConnection();
+        console.log('✅ MySQL Database connected successfully!');
+        console.log(`📊 Database: ${process.env.DB_NAME} on ${process.env.DB_HOST}:${process.env.DB_PORT}`);
         connection.release();
-    })
-    .catch(err => {
-        console.error('Database connection failed:', err.message);
-    });
+    } catch (err) {
+        console.error('❌ MySQL Database connection failed!');
+        console.error('Error details:', err.message);
+        console.error('Please check:');
+        console.error('  1. DB_HOST:', process.env.DB_HOST);
+        console.error('  2. DB_PORT:', process.env.DB_PORT);
+        console.error('  3. DB_USER:', process.env.DB_USER);
+        console.error('  4. DB_NAME:', process.env.DB_NAME);
+        console.error('  5. Is your Aiven service running?');
+    }
+})();
 
 module.exports = promisePool;
