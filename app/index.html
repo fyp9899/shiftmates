@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>ShiftMates - Relocation App</title>
+    <link rel="stylesheet" href="css/app-style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div id="app">
+        <!-- Auth Container -->
+        <div id="authContainer" class="auth-container">
+            <div class="app-logo">
+                <h1>Shift<span>Mates</span></h1>
+                <p>Your Trusted Relocation Partner</p>
+            </div>
+            <div class="auth-buttons">
+                <button class="btn-auth btn-login" onclick="showLogin()">
+                    <i class="fas fa-sign-in-alt"></i> Login
+                </button>
+                <button class="btn-auth btn-signup" onclick="showSignup()">
+                    <i class="fas fa-user-plus"></i> Signup
+                </button>
+            </div>
+        </div>
+
+        <!-- Login Form -->
+        <div id="loginForm" class="auth-form" style="display: none;">
+            <div class="form-header">
+                <button class="back-btn" onclick="showAuthContainer()">
+                    <i class="fas fa-arrow-left"></i>
+                </button>
+                <h2>Login</h2>
+            </div>
+            <form onsubmit="handleLogin(event)">
+                <div class="form-group">
+                    <i class="fas fa-envelope"></i>
+                    <input type="email" id="loginEmail" placeholder="Email" required>
+                </div>
+                <div class="form-group">
+                    <i class="fas fa-lock"></i>
+                    <input type="password" id="loginPassword" placeholder="Password" required>
+                </div>
+                <button type="submit" class="btn-submit">Login</button>
+            </form>
+        </div>
+
+        <!-- Signup Form -->
+        <div id="signupForm" class="auth-form" style="display: none;">
+            <div class="form-header">
+                <button class="back-btn" onclick="showAuthContainer()">
+                    <i class="fas fa-arrow-left"></i>
+                </button>
+                <h2>Create Account</h2>
+            </div>
+            <form onsubmit="handleSignup(event)" class="signup-scroll">
+                <div class="form-row">
+                    <div class="form-group">
+                        <i class="fas fa-user"></i>
+                        <input type="text" id="firstName" placeholder="First Name" required>
+                    </div>
+                    <div class="form-group">
+                        <i class="fas fa-user"></i>
+                        <input type="text" id="lastName" placeholder="Last Name" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <i class="fas fa-envelope"></i>
+                    <input type="email" id="signupEmail" placeholder="Email" required>
+                </div>
+                <div class="form-group">
+                    <i class="fas fa-phone"></i>
+                    <input type="tel" id="contactNumber" placeholder="Contact Number" required>
+                </div>
+                <div class="form-group">
+                    <i class="fas fa-map-marker-alt"></i>
+                    <textarea id="address" placeholder="Address" required></textarea>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <i class="fas fa-mail-bulk"></i>
+                        <input type="text" id="postalCode" placeholder="Postal Code">
+                    </div>
+                    <div class="form-group">
+                        <i class="fas fa-city"></i>
+                        <input type="text" id="city" placeholder="City" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <i class="fas fa-id-card"></i>
+                        <input type="text" id="cnic" placeholder="CNIC" required>
+                    </div>
+                    <div class="form-group">
+                        <i class="fas fa-location-dot"></i>
+                        <input type="text" id="area" placeholder="Area">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <i class="fas fa-lock"></i>
+                        <input type="password" id="signupPassword" placeholder="Password" required>
+                    </div>
+                    <div class="form-group">
+                        <i class="fas fa-lock"></i>
+                        <input type="password" id="confirmPassword" placeholder="Confirm Password" required>
+                    </div>
+                </div>
+                <button type="submit" class="btn-submit">Sign Up</button>
+            </form>
+        </div>
+
+        <!-- Main App Dashboard -->
+        <div id="appDashboard" style="display: none;">
+            <!-- Bottom Navigation -->
+            <nav class="bottom-nav">
+                <button class="nav-item active" data-page="home">
+                    <i class="fas fa-home"></i>
+                    <span>Home</span>
+                </button>
+                <button class="nav-item" data-page="relocate">
+                    <i class="fas fa-truck-moving"></i>
+                    <span>Relocate</span>
+                </button>
+                <button class="nav-item" data-page="bookings">
+                    <i class="fas fa-calendar-check"></i>
+                    <span>Bookings</span>
+                </button>
+                <button class="nav-item" data-page="profile">
+                    <i class="fas fa-user"></i>
+                    <span>Profile</span>
+                </button>
+            </nav>
+
+            <!-- Home Page -->
+            <div id="homePage" class="page active">
+                <div class="app-header">
+                    <div class="user-info">
+                        <h3>Welcome back, <span id="appUserName"></span>!</h3>
+                        <p>Ready for your next move?</p>
+                    </div>
+                    <button class="logout-btn" onclick="logout()">
+                        <i class="fas fa-sign-out-alt"></i>
+                    </button>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="quick-actions">
+                    <div class="quick-card" onclick="navigateToPage('relocate')">
+                        <i class="fas fa-truck"></i>
+                        <span>New Move</span>
+                    </div>
+                    <div class="quick-card" onclick="navigateToPage('bookings')">
+                        <i class="fas fa-list"></i>
+                        <span>My Moves</span>
+                    </div>
+                    <div class="quick-card" onclick="callSupport()">
+                        <i class="fas fa-headset"></i>
+                        <span>Support</span>
+                    </div>
+                </div>
+
+                <!-- Packages Section -->
+                <div class="section">
+                    <h4>Our Packages</h4>
+                    <div class="packages-scroll">
+                        <div class="package-mini basic">
+                            <h5>Basic</h5>
+                            <p class="price">RS5000</p>
+                            <small>2 labourers • Small truck</small>
+                        </div>
+                        <div class="package-mini gold">
+                            <h5>Gold</h5>
+                            <p class="price">RS10000</p>
+                            <small>4 labourers • Medium truck</small>
+                        </div>
+                        <div class="package-mini platinum">
+                            <h5>Platinum</h5>
+                            <p class="price">RS20000</p>
+                            <small>6 labourers • Large truck</small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Additional Services -->
+                <div class="section">
+                    <h4>Additional Services</h4>
+                    <div class="services-scroll">
+                        <div class="service-mini">
+                            <i class="fas fa-wrench"></i>
+                            <span>Plumber</span>
+                        </div>
+                        <div class="service-mini">
+                            <i class="fas fa-bolt"></i>
+                            <span>Electrician</span>
+                        </div>
+                        <div class="service-mini">
+                            <i class="fas fa-hammer"></i>
+                            <span>Carpenter</span>
+                        </div>
+                        <div class="service-mini">
+                            <i class="fas fa-snowplow"></i>
+                            <span>AC Tech</span>
+                        </div>
+                        <div class="service-mini">
+                            <i class="fas fa-broom"></i>
+                            <span>Cleaner</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Bookings -->
+                <div class="section">
+                    <h4>Recent Bookings</h4>
+                    <div id="recentBookings" class="recent-list">
+                        <p class="empty-state">No recent bookings</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Relocate Page -->
+            <div id="relocatePage" class="page">
+                <div class="page-header">
+                    <button class="back-nav" onclick="navigateToPage('home')">
+                        <i class="fas fa-arrow-left"></i>
+                    </button>
+                    <h3>Book Relocation</h3>
+                </div>
+                
+                <form id="relocationForm" class="relocation-form">
+                    <!-- Relocation Type -->
+                    <div class="form-section">
+                        <label>Relocation Type *</label>
+                        <div class="option-group">
+                            <label class="option-card">
+                                <input type="radio" name="relocationType" value="home" required>
+                                <i class="fas fa-home"></i>
+                                <span>Home</span>
+                            </label>
+                            <label class="option-card">
+                                <input type="radio" name="relocationType" value="office">
+                                <i class="fas fa-building"></i>
+                                <span>Office</span>
+                            </label>
+                            <label class="option-card">
+                                <input type="radio" name="relocationType" value="apartment">
+                                <i class="fas fa-city"></i>
+                                <span>Apartment</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Package Selection -->
+                    <div class="form-section">
+                        <label>Select Package *</label>
+                        <select id="packageSelect" required>
+                            <option value="">Choose a package</option>
+                        </select>
+                    </div>
+
+                    <!-- Labor Count -->
+                    <div class="form-section">
+                        <label>Number of Labourers *</label>
+                        <input type="number" id="laborCount" min="1" max="10" value="2" required>
+                    </div>
+
+                    <!-- Vehicle Size Selection -->
+<div class="form-section">
+    <label>Vehicle Size *</label>
+    <input type="hidden" id="selectedVehicleSize" value="">
+    <div id="vehicleSizeOptions" class="vehicle-size-group">
+        <!-- Dynamic vehicle size options will be added here -->
+    </div>
+</div>
+
+                    <!-- Additional Services -->
+                    <div class="form-section">
+                        <label>Additional Services</label>
+                        <div id="additionalServicesList" class="checkbox-group">
+                            <!-- Dynamic checkboxes will be added here -->
+                        </div>
+                    </div>
+
+                    <!-- Media Upload -->
+                    <div class="form-section">
+                        <label>Upload Pictures of Items</label>
+                        <input type="file" id="itemPictures" accept="image/*" multiple>
+                    </div>
+
+                    <div class="form-section">
+                        <label>Upload Videos of Items</label>
+                        <input type="file" id="itemVideos" accept="video/*" multiple>
+                    </div>
+
+                    <!-- Addresses -->
+                    <div class="form-section">
+                        <label>Pickup Address *</label>
+                        <textarea id="pickupAddress" rows="2" required></textarea>
+                    </div>
+
+                    <div class="form-section">
+                        <label>Dropoff Address *</label>
+                        <textarea id="dropoffAddress" rows="2" required></textarea>
+                    </div>
+
+                    <!-- Date and Time -->
+                    <div class="form-row">
+                        <div class="form-section">
+                            <label>Date *</label>
+                            <input type="date" id="bookingDate" required>
+                        </div>
+                        <div class="form-section">
+                            <label>Time *</label>
+                            <input type="time" id="bookingTime" required>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn-book">
+                        <i class="fas fa-check-circle"></i> BOOK NOW
+                    </button>
+                </form>
+            </div>
+
+            <!-- Bookings Page -->
+            <div id="bookingsPage" class="page">
+                <div class="page-header">
+                    <h3>My Bookings</h3>
+                </div>
+                <div id="bookingsList" class="bookings-list">
+                    <p class="empty-state">No bookings found</p>
+                </div>
+            </div>
+
+            <!-- Profile Page -->
+            <div id="profilePage" class="page">
+                <div class="page-header">
+                    <h3>My Profile</h3>
+                </div>
+                <div class="profile-card" id="profileInfo">
+                    <!-- Dynamic profile info -->
+                </div>
+                <button class="btn-logout" onclick="logout()">
+                    <i class="fas fa-sign-out-alt"></i> Logout
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay" style="display: none;">
+        <div class="spinner"></div>
+        <p>Loading...</p>
+    </div>
+
+    <script src="js/app.js"></script>
+</body>
+</html>

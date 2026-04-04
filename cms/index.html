@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ShiftMates - Admin CMS Portal</title>
+    <link rel="stylesheet" href="css/cms-style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <!-- Login Page -->
+    <div id="loginPage" class="cms-login">
+        <div class="login-box">
+            <div class="login-header">
+                <h1>Shift<span>Mates</span></h1>
+                <p>Admin CMS Portal</p>
+            </div>
+            <form id="adminLoginForm">
+                <div class="form-group">
+                    <i class="fas fa-user"></i>
+                    <input type="text" id="adminUsername" placeholder="Username" required>
+                </div>
+                <div class="form-group">
+                    <i class="fas fa-lock"></i>
+                    <input type="password" id="adminPassword" placeholder="Password" required>
+                </div>
+                <button type="submit" class="btn-login">Login to CMS</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Dashboard -->
+    <div id="dashboard" style="display: none;">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h2>Shift<span>Mates</span></h2>
+                <p>Admin Panel</p>
+            </div>
+            <nav class="sidebar-nav">
+                <button class="nav-link active" data-section="dashboard">
+                    <i class="fas fa-tachometer-alt"></i> Dashboard
+                </button>
+                <button class="nav-link" data-section="users">
+                    <i class="fas fa-users"></i> Users
+                </button>
+                <button class="nav-link" data-section="employees">
+                    <i class="fas fa-hard-hat"></i> Employees
+                </button>
+                <button class="nav-link" data-section="vehicles">
+                    <i class="fas fa-truck"></i> Vehicles
+                </button>
+                <button class="nav-link" data-section="supervisors">
+                    <i class="fas fa-user-tie"></i> Supervisors
+                </button>
+                <button class="nav-link" data-section="packages">
+                    <i class="fas fa-gift"></i> Packages
+                </button>
+                <button class="nav-link" data-section="bookings">
+                    <i class="fas fa-calendar-check"></i> Bookings
+                </button>
+                <button class="nav-link" data-section="media">
+                    <i class="fas fa-images"></i> Media
+                </button>
+            </nav>
+            <button class="logout-btn" onclick="adminLogout()">
+                <i class="fas fa-sign-out-alt"></i> Logout
+            </button>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <div class="top-bar">
+                <h3 id="sectionTitle">Dashboard</h3>
+                <div class="admin-info">
+                    <i class="fas fa-user-shield"></i>
+                    <span>Admin</span>
+                </div>
+            </div>
+
+            <div class="content-area">
+                <!-- Dashboard Stats -->
+                <div id="dashboardSection" class="section active">
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <i class="fas fa-users"></i>
+                            <div class="stat-info">
+                                <h3 id="totalUsers">0</h3>
+                                <p>Total Users</p>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <i class="fas fa-truck-moving"></i>
+                            <div class="stat-info">
+                                <h3 id="totalBookings">0</h3>
+                                <p>Total Bookings</p>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <i class="fas fa-clock"></i>
+                            <div class="stat-info">
+                                <h3 id="pendingBookings">0</h3>
+                                <p>Pending Bookings</p>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <i class="fas fa-check-circle"></i>
+                            <div class="stat-info">
+                                <h3 id="completedBookings">0</h3>
+                                <p>Completed</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="recent-section">
+                        <h4>Recent Bookings</h4>
+                        <div id="recentBookingsTable" class="table-container">
+                            <table>
+                                <thead>
+                                    <tr><th>ID</th><th>Customer</th><th>Type</th><th>Date</th><th>Status</th></tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Users Section -->
+                <div id="usersSection" class="section">
+                    <div class="section-header">
+                        <h4>Manage Users</h4>
+                        <button class="btn-refresh" onclick="loadUsers()">
+                            <i class="fas fa-sync-alt"></i> Refresh
+                        </button>
+                    </div>
+                    <div class="table-container">
+                        <table id="usersTable">
+                            <thead>
+                                <tr><th>ID</th><th>Name</th><th>Email</th><th>Phone</th><th>City</th><th>CNIC</th><th>Registered</th></tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Employees Section -->
+                <div id="employeesSection" class="section">
+                    <div class="section-header">
+                        <h4>Manage Employees</h4>
+                        <button class="btn-add" onclick="openEmployeeModal()">
+                            <i class="fas fa-plus"></i> Add Employee
+                        </button>
+                    </div>
+                    <div class="table-container">
+                        <table id="employeesTable">
+                            <thead>
+                                <tr><th>ID</th><th>Name</th><th>Contact</th><th>CNIC</th><th>Type</th><th>Charge</th><th>Status</th><th>Actions</th></tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Vehicles Section -->
+                <div id="vehiclesSection" class="section">
+                    <div class="section-header">
+                        <h4>Manage Vehicles</h4>
+                        <button class="btn-add" onclick="openVehicleModal()">
+                            <i class="fas fa-plus"></i> Add Vehicle
+                        </button>
+                    </div>
+                    <div class="table-container">
+                        <table id="vehiclesTable">
+                            <thead>
+                                <tr><th>ID</th><th>Registration</th><th>Driver Name</th><th>Driver Contact</th><th>Vehicle Name</th><th>Size</th><th>Status</th><th>Actions</th></tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Supervisors Section -->
+                <div id="supervisorsSection" class="section">
+                    <div class="section-header">
+                        <h4>Manage Supervisors</h4>
+                        <button class="btn-add" onclick="openSupervisorModal()">
+                            <i class="fas fa-plus"></i> Add Supervisor
+                        </button>
+                    </div>
+                    <div class="table-container">
+                        <table id="supervisorsTable">
+                            <thead>
+                                <tr><th>ID</th><th>Name</th><th>Contact</th><th>CNIC</th><th>Area</th><th>City</th><th>Salary</th><th>Status</th><th>Actions</th></tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Packages Section -->
+                <div id="packagesSection" class="section">
+                    <div class="section-header">
+                        <h4>Manage Packages</h4>
+                    </div>
+                    <div class="table-container">
+                        <table id="packagesTable">
+                            <thead>
+                                <tr><th>ID</th><th>Package Name</th><th>Price</th><th>Labourers</th><th>Truck Size</th><th>Insurance</th><th>Packing Materials</th><th>Furniture Assembly</th><th>Actions</th></tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Bookings Section -->
+                <div id="bookingsSection" class="section">
+                    <div class="section-header">
+                        <h4>Manage Bookings</h4>
+                        <button class="btn-refresh" onclick="loadBookings()">
+                            <i class="fas fa-sync-alt"></i> Refresh
+                        </button>
+                    </div>
+                    <div class="table-container">
+                        <table id="bookingsTable">
+                            <thead>
+                                <tr><th>ID</th><th>Customer</th><th>Type</th><th>Package</th><th>Pickup</th><th>Dropoff</th><th>Date</th><th>Status</th><th>Actions</th></tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Media Section -->
+                <div id="mediaSection" class="section">
+                    <div class="section-header">
+                        <h4>Customer Media</h4>
+                        <button class="btn-refresh" onclick="loadMedia()">
+                            <i class="fas fa-sync-alt"></i> Refresh
+                        </button>
+                    </div>
+                    <div class="table-container">
+                        <table id="mediaTable">
+                            <thead>
+                                <tr><th>ID</th><th>Customer Name</th><th>Contact</th><th>Package</th><th>Pictures</th><th>Videos</th><th>Date</th></tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Employee Modal -->
+    <div id="employeeModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeEmployeeModal()">&times;</span>
+            <h3>Add/Edit Employee</h3>
+            <form id="employeeForm">
+                <input type="hidden" id="employeeId">
+                <div class="form-group">
+                    <label>Employee Name *</label>
+                    <input type="text" id="empName" required>
+                </div>
+                <div class="form-group">
+                    <label>Contact Number *</label>
+                    <input type="tel" id="empContact" required>
+                </div>
+                <div class="form-group">
+                    <label>CNIC *</label>
+                    <input type="text" id="empCnic" required placeholder="12345-1234567-1">
+                </div>
+                <div class="form-group">
+                    <label>Age</label>
+                    <input type="number" id="empAge">
+                </div>
+                <div class="form-group">
+                    <label>Employee Type *</label>
+                    <select id="empType" required>
+                        <option value="">Select Type</option>
+                        <option value="Plumber">Plumber</option>
+                        <option value="Electrician">Electrician</option>
+                        <option value="Carpenter">Carpenter</option>
+                        <option value="AC Technician">AC Technician</option>
+                        <option value="Cleaner">Cleaner</option>
+                        <option value="Packer">Packer</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Status</label>
+                    <select id="empStatus">
+                        <option value="available">Available</option>
+                        <option value="busy">Busy</option>
+                        <option value="inactive">Inactive</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn-submit">Save Employee</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Vehicle Modal -->
+    <div id="vehicleModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeVehicleModal()">&times;</span>
+            <h3>Add/Edit Vehicle</h3>
+            <form id="vehicleForm">
+                <input type="hidden" id="vehicleId">
+                <div class="form-group">
+                    <label>Registration Number *</label>
+                    <input type="text" id="vehicleReg" required placeholder="ABC-123">
+                </div>
+                <div class="form-group">
+                    <label>Driver Name *</label>
+                    <input type="text" id="driverName" required>
+                </div>
+                <div class="form-group">
+                    <label>Driver Contact *</label>
+                    <input type="tel" id="driverContact" required>
+                </div>
+                <div class="form-group">
+                    <label>Driver CNIC *</label>
+                    <input type="text" id="driverCnic" required placeholder="12345-1234567-1">
+                </div>
+                <div class="form-group">
+                    <label>Vehicle Name *</label>
+                    <input type="text" id="vehicleName" required placeholder="e.g., Toyota Hilux">
+                </div>
+                <div class="form-group">
+                    <label>Model Year</label>
+                    <input type="number" id="vehicleYear" placeholder="2020">
+                </div>
+                <div class="form-group">
+                    <label>Vehicle Size *</label>
+                    <select id="vehicleSize" required>
+                        <option value="small">Small Truck</option>
+                        <option value="medium">Medium Truck</option>
+                        <option value="large">Large Truck</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Area</label>
+                    <input type="text" id="vehicleArea" placeholder="Service Area">
+                </div>
+                <div class="form-group">
+                    <label>Status</label>
+                    <select id="vehicleStatus">
+                        <option value="available">Available</option>
+                        <option value="busy">Busy</option>
+                        <option value="maintenance">Maintenance</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn-submit">Save Vehicle</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Supervisor Modal -->
+    <div id="supervisorModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeSupervisorModal()">&times;</span>
+            <h3>Add/Edit Supervisor</h3>
+            <form id="supervisorForm">
+                <input type="hidden" id="supervisorId">
+                <div class="form-group">
+                    <label>Supervisor Name *</label>
+                    <input type="text" id="supName" required>
+                </div>
+                <div class="form-group">
+                    <label>Age</label>
+                    <input type="number" id="supAge">
+                </div>
+                <div class="form-group">
+                    <label>Contact Number *</label>
+                    <input type="tel" id="supContact" required>
+                </div>
+                <div class="form-group">
+                    <label>CNIC *</label>
+                    <input type="text" id="supCnic" required placeholder="12345-1234567-1">
+                </div>
+                <div class="form-group">
+                    <label>Area</label>
+                    <input type="text" id="supArea" placeholder="Working Area">
+                </div>
+                <div class="form-group">
+                    <label>Salary (RS)</label>
+                    <input type="number" id="supSalary" placeholder="Monthly Salary">
+                </div>
+                <div class="form-group">
+                    <label>City</label>
+                    <input type="text" id="supCity" placeholder="Karachi">
+                </div>
+                <div class="form-group">
+                    <label>Status</label>
+                    <select id="supStatus">
+                        <option value="available">Available</option>
+                        <option value="assigned">Assigned</option>
+                        <option value="on_leave">On Leave</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn-submit">Save Supervisor</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Status Modal -->
+    <div id="statusModal" class="modal">
+        <div class="modal-content small">
+            <span class="close" onclick="closeStatusModal()">&times;</span>
+            <h3>Update Booking Status</h3>
+            <input type="hidden" id="statusBookingId">
+            <div class="form-group">
+                <label>Status</label>
+                <select id="bookingStatus">
+                    <option value="pending">Pending</option>
+                    <option value="confirmed">Confirmed</option>
+                    <option value="in_progress">In Progress</option>
+                    <option value="completed">Completed</option>
+                    <option value="cancelled">Cancelled</option>
+                </select>
+            </div>
+            <button onclick="updateBookingStatus()" class="btn-submit">Update Status</button>
+        </div>
+    </div>
+
+    <!-- Package Modal - Complete with all fields -->
+    <div id="packageModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closePackageModal()">&times;</span>
+            <h3>Edit Package</h3>
+            <input type="hidden" id="packageId">
+            
+            <div class="form-group">
+                <label>Price (RS)</label>
+                <input type="number" id="packagePrice" required step="1000">
+            </div>
+            
+            <div class="form-group">
+                <label>Number of Labourers</label>
+                <input type="number" id="packageLaborers" required min="1" max="20">
+            </div>
+            
+            <div class="form-group">
+                <label>Truck Size</label>
+                <select id="packageTruckSize">
+                    <option value="">Select Truck Size</option>
+                    <option value="small">Small Truck</option>
+                    <option value="medium">Medium Truck</option>
+                    <option value="large">Large Truck</option>
+                    <option value="custom">Custom</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label>Insurance Type</label>
+                <select id="packageInsurance">
+                    <option value="">Select Insurance</option>
+                    <option value="basic">Basic Insurance</option>
+                    <option value="premium">Premium Insurance</option>
+                    <option value="full">Full Insurance</option>
+                    <option value="custom">Custom Insurance</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label>Packing Materials</label>
+                <select id="packagePackingMaterials">
+                    <option value="No">No</option>
+                    <option value="Yes">Yes</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label>Furniture Assembly</label>
+                <select id="packageFurnitureAssembly">
+                    <option value="No">No</option>
+                    <option value="Yes">Yes</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label>Description</label>
+                <textarea id="packageDescription" rows="4" placeholder="Package description..."></textarea>
+            </div>
+            
+            <button onclick="updatePackage()" class="btn-submit">Update Package</button>
+        </div>
+    </div>
+
+    <script src="js/cms.js"></script>
+</body>
+</html>
