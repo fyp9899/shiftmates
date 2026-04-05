@@ -26,13 +26,13 @@ async function checkAppSession() {
             showAuthContainer();
         }
     } catch (error) {
-        console.error('Error:', error);
+        console.error('Session check error:', error);
+        // Just show auth container, no alert popup
         showAuthContainer();
     } finally {
         showLoading(false);
     }
 }
-
 function showAuthContainer() {
     document.getElementById('authContainer').style.display = 'flex';
     document.getElementById('loginForm').style.display = 'none';
