@@ -1,4 +1,4 @@
-// API Base URL - App on port 3001, backend on port 3000
+// API Base URL - Dynamic
 const API_URL = window.location.origin + '/api';
 let currentUser = null;
 
@@ -9,7 +9,7 @@ document.addEventListener('DOMContentLoaded', () => {
     setMinDate();
 });
 
-// Check session
+// Check session - NO ERROR POPUP
 async function checkAppSession() {
     showLoading(true);
     try {
@@ -27,12 +27,12 @@ async function checkAppSession() {
         }
     } catch (error) {
         console.error('Session check error:', error);
-        // Just show auth container, no alert popup
         showAuthContainer();
     } finally {
         showLoading(false);
     }
 }
+
 function showAuthContainer() {
     document.getElementById('authContainer').style.display = 'flex';
     document.getElementById('loginForm').style.display = 'none';
@@ -52,7 +52,7 @@ function showSignup() {
     document.getElementById('signupForm').style.display = 'block';
 }
 
-// Handle Login
+// Handle Login - NO EXTRA ALERTS
 async function handleLogin(event) {
     event.preventDefault();
     showLoading(true);
@@ -71,7 +71,6 @@ async function handleLogin(event) {
         const data = await response.json();
         
         if (response.ok) {
-            // Remove any alert here - just login silently
             currentUser = data.user;
             showAppDashboard();
             loadDashboardData();
