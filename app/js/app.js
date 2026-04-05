@@ -184,6 +184,11 @@ function showAppDashboard() {
     if (userNameSpan && currentUser) userNameSpan.textContent = currentUser.firstname;
     
     setupBottomNavigation();
+    
+    // Pre-load packages for relocate page when user is logged in
+    setTimeout(() => {
+        loadPackagesForSelect();
+    }, 500);
 }
 
 // Setup Bottom Navigation
@@ -310,26 +315,66 @@ function loadAdditionalServices() {
 
 // Load Relocate Form Data
 async function loadRelocateFormData() {
+    console.log('Loading relocate form data...');
     await loadPackagesForSelect();
     loadVehicleSizes();
     loadAdditionalServicesForCheckbox();
 }
 
+// FIXED: Load packages for select dropdown
 async function loadPackagesForSelect() {
+    console.log('Fetching packages for dropdown...');
     try {
         const response = await fetch(`${API_URL}/packages`);
-        if (!response.ok) return;
+        console.log('API response status:', response.status);
+        
+        if (!response.ok) {
+            console.error('Failed to fetch packages:', response.status);
+            return;
+        }
+        
         const packages = await response.json();
+        console.log('Packages received:', packages);
+        
         const select = document.getElementById('packageSelect');
-        if (!select) return;
+        if (!select) {
+            console.error('Package select element not found');
+            return;
+        }
         
-        select.innerHTML = '<option value="">Choose a package</option>' + 
-            packages.map(pkg => `<option value="${pkg.id}" data-price="${pkg.price}" data-labourers="${pkg.laborers}">${pkg.package_name.toUpperCase()} - RS${pkg.price} (${pkg.laborers} labourers)</option>`).join('');
+        if (packages && packages.length > 0) {
+            select.innerHTML = '<option value="">Choose a package</option>' + 
+                packages.map(pkg => `<option value="${pkg.id}" data-price="${pkg.price}" data-labourers="${pkg.laborers}">${pkg.package_name.toUpperCase()} - RS${pkg.price} (${pkg.laborers} labourers)</option>`).join('');
+            console.log('Packages loaded into dropdown');
+        } else {
+            // Fallback static packages if no packages in database
+            console.log('No packages from API, using static fallback');
+            select.innerHTML = `
+                <option value="">Choose a package</option>
+                <option value="1" data-price="5000" data-labourers="2">BASIC - RS5000 (2 labourers)</option>
+                <option value="2" data-price="10000" data-labourers="4">GOLD - RS10000 (4 labourers)</option>
+                <option value="3" data-price="20000" data-labourers="6">PLATINUM - RS20000 (6 labourers)</option>
+            `;
+        }
         
+        // Add event listener for package selection
         select.removeEventListener('change', handlePackageChange);
         select.addEventListener('change', handlePackageChange);
+        
     } catch (error) {
-        console.error('Error loading packages:', error);
+        console.error('Error loading packages for select:', error);
+        // Fallback static packages
+        const select = document.getElementById('packageSelect');
+        if (select) {
+            select.innerHTML = `
+                <option value="">Choose a package</option>
+                <option value="1" data-price="5000" data-labourers="2">BASIC - RS5000 (2 labourers)</option>
+                <option value="2" data-price="10000" data-labourers="4">GOLD - RS10000 (4 labourers)</option>
+                <option value="3" data-price="20000" data-labourers="6">PLATINUM - RS20000 (6 labourers)</option>
+            `;
+            select.removeEventListener('change', handlePackageChange);
+            select.addEventListener('change', handlePackageChange);
+        }
     }
 }
 
@@ -339,6 +384,7 @@ function handlePackageChange(event) {
     const laborCountInput = document.getElementById('laborCount');
     if (selectedOption && selectedOption.dataset && selectedOption.dataset.labourers && laborCountInput) {
         laborCountInput.value = selectedOption.dataset.labourers;
+        console.log('Labour count updated to:', selectedOption.dataset.labourers);
     }
 }
 
@@ -569,4 +615,18 @@ function showServiceInfo(service) {
 function selectPackage(packageName) {
     navigateToPage('relocate');
     alert(`You selected ${packageName} package. Please fill the relocation form to proceed.`);
+}
+
+// Also load packages when relocate page is shown
+const relocatePage = document.getElementById('relocatePage');
+if (relocatePage) {
+    const observer = new MutationObserver(function(mutations) {
+        mutations.forEach(function(mutation) {
+            if (mutation.attributeName === 'class' && relocatePage.classList.contains('active')) {
+                console.log('Relocate page activated, loading packages...');
+                loadPackagesForSelect();
+            }
+        });
+    });
+    observer.observe(relocatePage, { attributes: true });
 }
