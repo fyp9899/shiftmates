@@ -71,6 +71,7 @@ async function handleLogin(event) {
         const data = await response.json();
         
         if (response.ok) {
+            // Remove any alert here - just login silently
             currentUser = data.user;
             showAppDashboard();
             loadDashboardData();
@@ -79,7 +80,7 @@ async function handleLogin(event) {
             alert(data.error || 'Login failed');
         }
     } catch (error) {
-        console.error('Error:', error);
+        console.error('Login error:', error);
         alert('Connection error. Please try again.');
     } finally {
         showLoading(false);
@@ -139,7 +140,7 @@ async function handleSignup(event) {
             alert(data.error || 'Signup failed');
         }
     } catch (error) {
-        console.error('Error:', error);
+        console.error('Signup error:', error);
         alert('Connection error. Please try again.');
     } finally {
         showLoading(false);
