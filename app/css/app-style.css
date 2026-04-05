@@ -17,10 +17,11 @@ body {
     height: 100vh;
     background: #f5f5f5;
     position: relative;
-    overflow: hidden;
+    overflow-y: auto;
+    overflow-x: hidden;
     box-shadow: 0 0 20px rgba(0,0,0,0.2);
+    -webkit-overflow-scrolling: touch;
 }
-
 /* Auth Container */
 .auth-container {
     height: 100%;
