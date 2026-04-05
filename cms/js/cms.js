@@ -1,6 +1,5 @@
 // API URL - Now all on same port 3000
-const API_URL = 'http://localhost:3000/api';
-
+const API_URL = window.location.origin + '/api';
 // Wait for page to load
 document.addEventListener('DOMContentLoaded', () => {
     console.log('CMS Loaded');
