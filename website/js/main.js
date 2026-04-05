@@ -1,5 +1,5 @@
 // API Base URL - Website uses port 3000
-const API_URL = 'http://localhost:3000/api';
+const API_URL = window.location.origin + '/api';
 
 // Check login status on page load
 document.addEventListener('DOMContentLoaded', async () => {
