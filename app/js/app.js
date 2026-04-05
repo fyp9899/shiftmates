@@ -9,7 +9,7 @@ document.addEventListener('DOMContentLoaded', () => {
     setMinDate();
 });
 
-// Check session - NO ERROR POPUP
+// Check session - NO ALERTS
 async function checkAppSession() {
     showLoading(true);
     try {
@@ -27,6 +27,7 @@ async function checkAppSession() {
         }
     } catch (error) {
         console.error('Session check error:', error);
+        // NO ALERT HERE - just show auth container
         showAuthContainer();
     } finally {
         showLoading(false);
@@ -52,7 +53,7 @@ function showSignup() {
     document.getElementById('signupForm').style.display = 'block';
 }
 
-// Handle Login - NO EXTRA ALERTS
+// Handle Login
 async function handleLogin(event) {
     event.preventDefault();
     showLoading(true);
@@ -203,7 +204,7 @@ async function loadPackages() {
         const packages = await response.json();
         
         const packagesContainer = document.querySelector('.packages-scroll');
-        if (packagesContainer) {
+        if (packagesContainer && packages.length > 0) {
             packagesContainer.innerHTML = packages.map(pkg => `
                 <div class="package-mini ${pkg.package_name}" onclick="selectPackage('${pkg.package_name}')">
                     <h5>${pkg.package_name.charAt(0).toUpperCase() + pkg.package_name.slice(1)}</h5>
