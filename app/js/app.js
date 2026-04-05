@@ -4,17 +4,12 @@ let currentUser = null;
 
 // Initialize App
 document.addEventListener('DOMContentLoaded', () => {
-    // Small delay to ensure everything is loaded
-    setTimeout(() => {
-        checkAppSession();
-    }, 100);
+    initializeApp();
     initializeOptionCards();
     setMinDate();
 });
 
-// Check session - COMPLETELY SILENT, NO ALERTS
-async function checkAppSession() {
-    // Don't show loading for session check to avoid popup
+async function initializeApp() {
     try {
         const response = await fetch(`${API_URL}/auth/session`, {
             credentials: 'include',
@@ -24,20 +19,16 @@ async function checkAppSession() {
             }
         });
         
-        if (!response.ok) {
-            showAuthContainer();
-            return;
+        if (response.ok) {
+            const data = await response.json();
+            if (data && data.loggedIn) {
+                currentUser = data.user;
+                showAppDashboard();
+                loadDashboardData();
+                return;
+            }
         }
-        
-        const data = await response.json();
-        
-        if (data && data.loggedIn) {
-            currentUser = data.user;
-            showAppDashboard();
-            loadDashboardData();
-        } else {
-            showAuthContainer();
-        }
+        showAuthContainer();
     } catch (error) {
         console.log('Session check failed, showing auth container');
         showAuthContainer();
@@ -45,22 +36,35 @@ async function checkAppSession() {
 }
 
 function showAuthContainer() {
-    document.getElementById('authContainer').style.display = 'flex';
-    document.getElementById('loginForm').style.display = 'none';
-    document.getElementById('signupForm').style.display = 'none';
-    document.getElementById('appDashboard').style.display = 'none';
+    const authContainer = document.getElementById('authContainer');
+    const loginForm = document.getElementById('loginForm');
+    const signupForm = document.getElementById('signupForm');
+    const appDashboard = document.getElementById('appDashboard');
+    
+    if (authContainer) authContainer.style.display = 'flex';
+    if (loginForm) loginForm.style.display = 'none';
+    if (signupForm) signupForm.style.display = 'none';
+    if (appDashboard) appDashboard.style.display = 'none';
 }
 
 function showLogin() {
-    document.getElementById('authContainer').style.display = 'none';
-    document.getElementById('loginForm').style.display = 'block';
-    document.getElementById('signupForm').style.display = 'none';
+    const authContainer = document.getElementById('authContainer');
+    const loginForm = document.getElementById('loginForm');
+    const signupForm = document.getElementById('signupForm');
+    
+    if (authContainer) authContainer.style.display = 'none';
+    if (loginForm) loginForm.style.display = 'block';
+    if (signupForm) signupForm.style.display = 'none';
 }
 
 function showSignup() {
-    document.getElementById('authContainer').style.display = 'none';
-    document.getElementById('loginForm').style.display = 'none';
-    document.getElementById('signupForm').style.display = 'block';
+    const authContainer = document.getElementById('authContainer');
+    const loginForm = document.getElementById('loginForm');
+    const signupForm = document.getElementById('signupForm');
+    
+    if (authContainer) authContainer.style.display = 'none';
+    if (loginForm) loginForm.style.display = 'none';
+    if (signupForm) signupForm.style.display = 'block';
 }
 
 // Handle Login
@@ -167,11 +171,17 @@ async function handleSignup(event) {
 
 // Show App Dashboard
 function showAppDashboard() {
-    document.getElementById('authContainer').style.display = 'none';
-    document.getElementById('loginForm').style.display = 'none';
-    document.getElementById('signupForm').style.display = 'none';
-    document.getElementById('appDashboard').style.display = 'block';
-    document.getElementById('appUserName').textContent = currentUser.firstname;
+    const authContainer = document.getElementById('authContainer');
+    const loginForm = document.getElementById('loginForm');
+    const signupForm = document.getElementById('signupForm');
+    const appDashboard = document.getElementById('appDashboard');
+    const userNameSpan = document.getElementById('appUserName');
+    
+    if (authContainer) authContainer.style.display = 'none';
+    if (loginForm) loginForm.style.display = 'none';
+    if (signupForm) signupForm.style.display = 'none';
+    if (appDashboard) appDashboard.style.display = 'block';
+    if (userNameSpan && currentUser) userNameSpan.textContent = currentUser.firstname;
     
     setupBottomNavigation();
 }
@@ -180,11 +190,14 @@ function showAppDashboard() {
 function setupBottomNavigation() {
     const navItems = document.querySelectorAll('.nav-item');
     navItems.forEach(item => {
-        item.addEventListener('click', () => {
-            const page = item.dataset.page;
-            navigateToPage(page);
-        });
+        item.removeEventListener('click', handleNavClick);
+        item.addEventListener('click', handleNavClick);
     });
+}
+
+function handleNavClick(event) {
+    const page = event.currentTarget.dataset.page;
+    navigateToPage(page);
 }
 
 function navigateToPage(pageName) {
@@ -198,7 +211,9 @@ function navigateToPage(pageName) {
     document.querySelectorAll('.page').forEach(page => {
         page.classList.remove('active');
     });
-    document.getElementById(`${pageName}Page`).classList.add('active');
+    
+    const targetPage = document.getElementById(`${pageName}Page`);
+    if (targetPage) targetPage.classList.add('active');
     
     if (pageName === 'bookings') {
         loadUserBookings();
@@ -219,10 +234,11 @@ async function loadDashboardData() {
 async function loadPackages() {
     try {
         const response = await fetch(`${API_URL}/packages`);
+        if (!response.ok) return;
         const packages = await response.json();
         
         const packagesContainer = document.querySelector('.packages-scroll');
-        if (packagesContainer && packages.length > 0) {
+        if (packagesContainer && packages && packages.length > 0) {
             packagesContainer.innerHTML = packages.map(pkg => `
                 <div class="package-mini ${pkg.package_name}" onclick="selectPackage('${pkg.package_name}')">
                     <h5>${pkg.package_name.charAt(0).toUpperCase() + pkg.package_name.slice(1)}</h5>
@@ -242,9 +258,12 @@ async function loadRecentBookings() {
         const response = await fetch(`${API_URL}/bookings/user/${currentUser.id}`, {
             credentials: 'include'
         });
+        if (!response.ok) return;
         const bookings = await response.json();
         const recentContainer = document.getElementById('recentBookings');
         const recentBookings = bookings.slice(0, 3);
+        
+        if (!recentContainer) return;
         
         if (recentBookings.length === 0) {
             recentContainer.innerHTML = '<p class="empty-state">No recent bookings</p>';
@@ -299,19 +318,27 @@ async function loadRelocateFormData() {
 async function loadPackagesForSelect() {
     try {
         const response = await fetch(`${API_URL}/packages`);
+        if (!response.ok) return;
         const packages = await response.json();
         const select = document.getElementById('packageSelect');
+        if (!select) return;
+        
         select.innerHTML = '<option value="">Choose a package</option>' + 
             packages.map(pkg => `<option value="${pkg.id}" data-price="${pkg.price}" data-labourers="${pkg.laborers}">${pkg.package_name.toUpperCase()} - RS${pkg.price} (${pkg.laborers} labourers)</option>`).join('');
         
-        select.addEventListener('change', () => {
-            const selectedOption = select.options[select.selectedIndex];
-            if (selectedOption && selectedOption.dataset.labourers) {
-                document.getElementById('laborCount').value = selectedOption.dataset.labourers;
-            }
-        });
+        select.removeEventListener('change', handlePackageChange);
+        select.addEventListener('change', handlePackageChange);
     } catch (error) {
         console.error('Error loading packages:', error);
+    }
+}
+
+function handlePackageChange(event) {
+    const select = event.target;
+    const selectedOption = select.options[select.selectedIndex];
+    const laborCountInput = document.getElementById('laborCount');
+    if (selectedOption && selectedOption.dataset && selectedOption.dataset.labourers && laborCountInput) {
+        laborCountInput.value = selectedOption.dataset.labourers;
     }
 }
 
@@ -339,7 +366,8 @@ function selectVehicleSize(size, element) {
         opt.classList.remove('selected');
     });
     element.classList.add('selected');
-    document.getElementById('selectedVehicleSize').value = size;
+    const selectedInput = document.getElementById('selectedVehicleSize');
+    if (selectedInput) selectedInput.value = size;
 }
 
 function loadAdditionalServicesForCheckbox() {
@@ -364,72 +392,76 @@ function loadAdditionalServicesForCheckbox() {
 }
 
 // Handle Relocation Booking
-document.getElementById('relocationForm')?.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    
-    const relocationType = document.querySelector('input[name="relocationType"]:checked')?.value;
-    if (!relocationType) {
-        alert('Please select relocation type');
-        return;
-    }
-    
-    const selectedVehicleSize = document.getElementById('selectedVehicleSize')?.value;
-    if (!selectedVehicleSize) {
-        alert('Please select a vehicle size (Small, Medium, or Large Truck)');
-        return;
-    }
-    
-    const bookingData = {
-        user_id: currentUser.id,
-        relocation_type: relocationType,
-        package_id: document.getElementById('packageSelect').value || null,
-        labor_count: parseInt(document.getElementById('laborCount').value),
-        pickup_address: document.getElementById('pickupAddress').value,
-        dropoff_address: document.getElementById('dropoffAddress').value,
-        booking_date: document.getElementById('bookingDate').value,
-        booking_time: document.getElementById('bookingTime').value,
-        vehicle_size: selectedVehicleSize
-    };
-    
-    if (!bookingData.pickup_address || !bookingData.dropoff_address || !bookingData.booking_date || !bookingData.booking_time) {
-        alert('Please fill in all required fields');
-        return;
-    }
-    
-    const submitBtn = e.target.querySelector('button[type="submit"]');
-    const originalText = submitBtn.textContent;
-    submitBtn.textContent = 'Booking...';
-    submitBtn.disabled = true;
-    
-    try {
-        const response = await fetch(`${API_URL}/bookings/create`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
-            body: JSON.stringify(bookingData)
-        });
+const relocationForm = document.getElementById('relocationForm');
+if (relocationForm) {
+    relocationForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
         
-        const data = await response.json();
-        if (response.ok) {
-            alert('Booking created successfully!');
-            document.getElementById('relocationForm').reset();
-            document.getElementById('selectedVehicleSize').value = '';
-            document.querySelectorAll('.vehicle-size-option').forEach(opt => opt.classList.remove('selected'));
-            document.querySelectorAll('input[name="relocationType"]').forEach(radio => radio.checked = false);
-            document.querySelectorAll('.option-card').forEach(card => card.classList.remove('selected'));
-            navigateToPage('bookings');
-            loadUserBookings();
-        } else {
-            alert(data.error || 'Booking failed');
+        const relocationType = document.querySelector('input[name="relocationType"]:checked')?.value;
+        if (!relocationType) {
+            alert('Please select relocation type');
+            return;
         }
-    } catch (error) {
-        console.error('Error:', error);
-        alert('An error occurred. Please try again.');
-    } finally {
-        submitBtn.textContent = originalText;
-        submitBtn.disabled = false;
-    }
-});
+        
+        const selectedVehicleSize = document.getElementById('selectedVehicleSize')?.value;
+        if (!selectedVehicleSize) {
+            alert('Please select a vehicle size (Small, Medium, or Large Truck)');
+            return;
+        }
+        
+        const bookingData = {
+            user_id: currentUser.id,
+            relocation_type: relocationType,
+            package_id: document.getElementById('packageSelect')?.value || null,
+            labor_count: parseInt(document.getElementById('laborCount')?.value || 2),
+            pickup_address: document.getElementById('pickupAddress')?.value,
+            dropoff_address: document.getElementById('dropoffAddress')?.value,
+            booking_date: document.getElementById('bookingDate')?.value,
+            booking_time: document.getElementById('bookingTime')?.value,
+            vehicle_size: selectedVehicleSize
+        };
+        
+        if (!bookingData.pickup_address || !bookingData.dropoff_address || !bookingData.booking_date || !bookingData.booking_time) {
+            alert('Please fill in all required fields');
+            return;
+        }
+        
+        const submitBtn = e.target.querySelector('button[type="submit"]');
+        const originalText = submitBtn.textContent;
+        submitBtn.textContent = 'Booking...';
+        submitBtn.disabled = true;
+        
+        try {
+            const response = await fetch(`${API_URL}/bookings/create`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify(bookingData)
+            });
+            
+            const data = await response.json();
+            if (response.ok) {
+                alert('Booking created successfully!');
+                relocationForm.reset();
+                const selectedInput = document.getElementById('selectedVehicleSize');
+                if (selectedInput) selectedInput.value = '';
+                document.querySelectorAll('.vehicle-size-option').forEach(opt => opt.classList.remove('selected'));
+                document.querySelectorAll('input[name="relocationType"]').forEach(radio => radio.checked = false);
+                document.querySelectorAll('.option-card').forEach(card => card.classList.remove('selected'));
+                navigateToPage('bookings');
+                loadUserBookings();
+            } else {
+                alert(data.error || 'Booking failed');
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            alert('An error occurred. Please try again.');
+        } finally {
+            submitBtn.textContent = originalText;
+            submitBtn.disabled = false;
+        }
+    });
+}
 
 // Load User Bookings
 async function loadUserBookings() {
@@ -438,8 +470,11 @@ async function loadUserBookings() {
         const response = await fetch(`${API_URL}/bookings/user/${currentUser.id}`, {
             credentials: 'include'
         });
+        if (!response.ok) return;
         const bookings = await response.json();
         const container = document.getElementById('bookingsList');
+        
+        if (!container) return;
         
         if (bookings.length === 0) {
             container.innerHTML = '<p class="empty-state">No bookings found</p>';
@@ -471,16 +506,19 @@ async function loadUserProfile() {
     if (!currentUser) return;
     try {
         const response = await fetch(`${API_URL}/auth/session`, { credentials: 'include' });
+        if (!response.ok) return;
         const data = await response.json();
         if (data.loggedIn) {
             const profileContainer = document.getElementById('profileInfo');
-            profileContainer.innerHTML = `
-                <div class="profile-field"><div class="label">Name</div><div class="value">${data.user.firstname} ${data.user.lastname}</div></div>
-                <div class="profile-field"><div class="label">Email</div><div class="value">${data.user.email}</div></div>
-                <div class="profile-field"><div class="label">Phone</div><div class="value">${data.user.contact_number || 'N/A'}</div></div>
-                <div class="profile-field"><div class="label">Address</div><div class="value">${data.user.address || 'N/A'}</div></div>
-                <div class="profile-field"><div class="label">City</div><div class="value">${data.user.city || 'N/A'}</div></div>
-            `;
+            if (profileContainer) {
+                profileContainer.innerHTML = `
+                    <div class="profile-field"><div class="label">Name</div><div class="value">${data.user.firstname} ${data.user.lastname}</div></div>
+                    <div class="profile-field"><div class="label">Email</div><div class="value">${data.user.email}</div></div>
+                    <div class="profile-field"><div class="label">Phone</div><div class="value">${data.user.contact_number || 'N/A'}</div></div>
+                    <div class="profile-field"><div class="label">Address</div><div class="value">${data.user.address || 'N/A'}</div></div>
+                    <div class="profile-field"><div class="label">City</div><div class="value">${data.user.city || 'N/A'}</div></div>
+                `;
+            }
         }
     } catch (error) {
         console.error('Error loading profile:', error);
@@ -518,11 +556,6 @@ function initializeOptionCards() {
             }
         });
     });
-}
-
-function showLoading(show) {
-    const overlay = document.getElementById('loadingOverlay');
-    if (overlay) overlay.style.display = show ? 'flex' : 'none';
 }
 
 function callSupport() {
