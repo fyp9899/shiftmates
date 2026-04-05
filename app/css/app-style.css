@@ -209,12 +209,13 @@ body {
 }
 
 /* Pages - FIXED SCROLLING */
+/* Pages - FIXED SCROLLING */
 .page {
-    height: 100%;
-    overflow-y: auto;
+    height: auto;
+    min-height: 100%;
+    overflow-y: visible;
     padding-bottom: 80px;
     display: none;
-    -webkit-overflow-scrolling: touch;
 }
 
 .page.active {
@@ -403,12 +404,12 @@ body {
 }
 
 /* Relocation Form - FIXED SCROLLING */
+/* Relocation Form - FIXED SCROLLING */
 .relocation-form {
     padding: 1rem;
     padding-bottom: 120px;
     overflow-y: visible;
 }
-
 .form-section {
     margin-bottom: 1.5rem;
 }
@@ -651,4 +652,60 @@ body {
 
 @keyframes spin {
     to { transform: rotate(360deg); }
+}
+/* Additional fixes for mobile scrolling */
+body {
+    overflow: hidden;
+    position: fixed;
+    width: 100%;
+    height: 100%;
+}
+
+#app {
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.auth-form {
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    height: 100%;
+}
+
+.signup-scroll {
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    max-height: calc(100vh - 120px);
+}
+
+/* Make all scrollable areas work on mobile */
+.packages-scroll,
+.services-scroll,
+.recent-list,
+.checkbox-group,
+.vehicle-size-group {
+    overflow-x: auto;
+    overflow-y: visible;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Ensure form sections are scrollable */
+.form-section {
+    margin-bottom: 1.5rem;
+    clear: both;
+}
+
+/* Fix for long forms on mobile */
+.relocation-form {
+    padding-bottom: 100px;
+}
+
+/* Ensure buttons are clickable */
+.btn-book,
+.btn-submit,
+.btn-add,
+.btn-edit,
+.btn-delete {
+    cursor: pointer;
+    touch-action: manipulation;
 }
