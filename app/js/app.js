@@ -1,5 +1,5 @@
 // API Base URL - App on port 3001, backend on port 3000
-const API_URL = 'http://localhost:3000/api';
+const API_URL = window.location.origin + '/api';
 let currentUser = null;
 
 // Initialize App
