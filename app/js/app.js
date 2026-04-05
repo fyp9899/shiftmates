@@ -4,21 +4,34 @@ let currentUser = null;
 
 // Initialize App
 document.addEventListener('DOMContentLoaded', () => {
-    checkAppSession();
+    // Small delay to ensure everything is loaded
+    setTimeout(() => {
+        checkAppSession();
+    }, 100);
     initializeOptionCards();
     setMinDate();
 });
 
-// Check session - NO ALERTS
+// Check session - COMPLETELY SILENT, NO ALERTS
 async function checkAppSession() {
-    showLoading(true);
+    // Don't show loading for session check to avoid popup
     try {
         const response = await fetch(`${API_URL}/auth/session`, {
-            credentials: 'include'
+            credentials: 'include',
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json'
+            }
         });
+        
+        if (!response.ok) {
+            showAuthContainer();
+            return;
+        }
+        
         const data = await response.json();
         
-        if (data.loggedIn) {
+        if (data && data.loggedIn) {
             currentUser = data.user;
             showAppDashboard();
             loadDashboardData();
@@ -26,11 +39,8 @@ async function checkAppSession() {
             showAuthContainer();
         }
     } catch (error) {
-        console.error('Session check error:', error);
-        // NO ALERT HERE - just show auth container
+        console.log('Session check failed, showing auth container');
         showAuthContainer();
-    } finally {
-        showLoading(false);
     }
 }
 
@@ -56,10 +66,14 @@ function showSignup() {
 // Handle Login
 async function handleLogin(event) {
     event.preventDefault();
-    showLoading(true);
     
     const email = document.getElementById('loginEmail').value;
     const password = document.getElementById('loginPassword').value;
+    
+    const submitBtn = event.target.querySelector('button[type="submit"]');
+    const originalText = submitBtn.textContent;
+    submitBtn.textContent = 'Logging in...';
+    submitBtn.disabled = true;
     
     try {
         const response = await fetch(`${API_URL}/auth/login`, {
@@ -83,7 +97,8 @@ async function handleLogin(event) {
         console.error('Login error:', error);
         alert('Connection error. Please try again.');
     } finally {
-        showLoading(false);
+        submitBtn.textContent = originalText;
+        submitBtn.disabled = false;
     }
 }
 
@@ -98,8 +113,6 @@ async function handleSignup(event) {
         alert('Passwords do not match!');
         return;
     }
-    
-    showLoading(true);
     
     const userData = {
         firstname: document.getElementById('firstName').value,
@@ -118,10 +131,14 @@ async function handleSignup(event) {
     for (let field of required) {
         if (!userData[field]) {
             alert(`Please fill in the ${field} field`);
-            showLoading(false);
             return;
         }
     }
+    
+    const submitBtn = event.target.querySelector('button[type="submit"]');
+    const originalText = submitBtn.textContent;
+    submitBtn.textContent = 'Creating account...';
+    submitBtn.disabled = true;
     
     try {
         const response = await fetch(`${API_URL}/auth/signup`, {
@@ -143,7 +160,8 @@ async function handleSignup(event) {
         console.error('Signup error:', error);
         alert('Connection error. Please try again.');
     } finally {
-        showLoading(false);
+        submitBtn.textContent = originalText;
+        submitBtn.disabled = false;
     }
 }
 
@@ -348,19 +366,16 @@ function loadAdditionalServicesForCheckbox() {
 // Handle Relocation Booking
 document.getElementById('relocationForm')?.addEventListener('submit', async (e) => {
     e.preventDefault();
-    showLoading(true);
     
     const relocationType = document.querySelector('input[name="relocationType"]:checked')?.value;
     if (!relocationType) {
         alert('Please select relocation type');
-        showLoading(false);
         return;
     }
     
     const selectedVehicleSize = document.getElementById('selectedVehicleSize')?.value;
     if (!selectedVehicleSize) {
         alert('Please select a vehicle size (Small, Medium, or Large Truck)');
-        showLoading(false);
         return;
     }
     
@@ -378,9 +393,13 @@ document.getElementById('relocationForm')?.addEventListener('submit', async (e) 
     
     if (!bookingData.pickup_address || !bookingData.dropoff_address || !bookingData.booking_date || !bookingData.booking_time) {
         alert('Please fill in all required fields');
-        showLoading(false);
         return;
     }
+    
+    const submitBtn = e.target.querySelector('button[type="submit"]');
+    const originalText = submitBtn.textContent;
+    submitBtn.textContent = 'Booking...';
+    submitBtn.disabled = true;
     
     try {
         const response = await fetch(`${API_URL}/bookings/create`, {
@@ -407,7 +426,8 @@ document.getElementById('relocationForm')?.addEventListener('submit', async (e) 
         console.error('Error:', error);
         alert('An error occurred. Please try again.');
     } finally {
-        showLoading(false);
+        submitBtn.textContent = originalText;
+        submitBtn.disabled = false;
     }
 });
 
