@@ -1,6 +1,27 @@
+# Dependencies
 node_modules/
+
+# Environment variables
 .env
+
+# SSL certificates
+ca.pem
+*.pem
+
+# Uploads
 uploads/
-.DS_Store
+
+# Logs
 *.log
-package-lock.json
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+
+# Database files
+*.sql
+*.db

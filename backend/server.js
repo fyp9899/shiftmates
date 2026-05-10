@@ -5,6 +5,8 @@ const path = require('path');
 const multer = require('multer');
 const fs = require('fs');
 const bcrypt = require('bcryptjs');
+const dotenv = require('dotenv');
+dotenv.config(); // Load environment variables
 
 const app = express();
 const db = require('./db');
@@ -165,6 +167,161 @@ app.get('/api/supervisors/city/:city', async (req, res) => {
 // ============================================
 // BOOKING ROUTES
 // ============================================
+
+// Generate confirmation slip - FIXED VERSION
+function generateSlipNumber() {
+    const date = new Date();
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+    return `SLIP-${year}${month}${day}-${random}`;
+}
+
+app.post('/api/bookings/:id/generate-slip', async (req, res) => {
+    const bookingId = req.params.id;
+    
+    try {
+        // Check if slip already exists
+        const [existingSlip] = await db.query('SELECT * FROM confirmation_slips WHERE booking_id = ?', [bookingId]);
+        if (existingSlip.length > 0) {
+            return res.json({ message: 'Slip already exists', slip: existingSlip[0] });
+        }
+        
+        // Get booking details with user info
+        const [bookings] = await db.query(`
+            SELECT b.*, u.firstname, u.lastname, u.email, u.contact_number, 
+                   p.package_name, p.price as package_price
+            FROM bookings b
+            LEFT JOIN users u ON b.user_id = u.id
+            LEFT JOIN packages p ON b.package_id = p.id
+            WHERE b.id = ?
+        `, [bookingId]);
+        
+        if (bookings.length === 0) {
+            return res.status(404).json({ error: 'Booking not found' });
+        }
+        
+        const booking = bookings[0];
+        
+        // Get available vehicle (truck) based on vehicle_size or package
+        let vehicleSize = booking.vehicle_size;
+        if (!vehicleSize && booking.package_name) {
+            if (booking.package_name.toLowerCase() === 'basic') vehicleSize = 'small';
+            else if (booking.package_name.toLowerCase() === 'gold') vehicleSize = 'medium';
+            else if (booking.package_name.toLowerCase() === 'platinum') vehicleSize = 'large';
+        }
+        
+        const [vehicles] = await db.query(
+            'SELECT * FROM vehicles WHERE vehicle_size = ? AND status = "available" LIMIT 1',
+            [vehicleSize || 'medium']
+        );
+        const vehicle = vehicles[0] || null;
+        
+        // Get available supervisor based on user's city
+        const [supervisors] = await db.query(
+            'SELECT * FROM supervisors WHERE status = "available" LIMIT 1'
+        );
+        const supervisor = supervisors[0] || null;
+        
+        const slipNumber = generateSlipNumber();
+        const bookingDay = new Date(booking.booking_date).toLocaleDateString('en-US', { weekday: 'long' });
+        
+        // Insert confirmation slip
+        const [result] = await db.query(`
+            INSERT INTO confirmation_slips (
+                slip_number, booking_id, customer_name, customer_email, customer_phone,
+                relocation_type, package_name, laborers_count, booking_date, booking_time,
+                booking_day, pickup_address, dropoff_address, truck_name, truck_registration,
+                driver_name, driver_contact, supervisor_name, supervisor_contact, total_price, status
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'generated')
+        `, [
+            slipNumber, bookingId,
+            `${booking.firstname} ${booking.lastname}`,
+            booking.email || null,
+            booking.contact_number || null,
+            booking.relocation_type,
+            booking.package_name || 'Standard',
+            booking.labor_count || 2,
+            booking.booking_date,
+            booking.booking_time,
+            bookingDay,
+            booking.pickup_address,
+            booking.dropoff_address,
+            vehicle ? vehicle.vehicle_name : 'Truck Assigned Later',
+            vehicle ? vehicle.vehicle_registration_number : 'Pending',
+            vehicle ? vehicle.driver_name : 'Driver Assigned Later',
+            vehicle ? vehicle.driver_contact : 'Pending',
+            supervisor ? supervisor.supervisor_name : 'Supervisor Assigned Later',
+            supervisor ? supervisor.supervisor_contact : 'Pending',
+            booking.total_price || 0
+        ]);
+        
+        // Return the created slip
+        const [newSlip] = await db.query('SELECT * FROM confirmation_slips WHERE id = ?', [result.insertId]);
+        res.json({ message: 'Confirmation slip generated successfully', slip: newSlip[0] });
+        
+    } catch (error) {
+        console.error('Error generating slip:', error);
+        res.status(500).json({ error: 'Failed to generate confirmation slip: ' + error.message });
+    }
+});
+
+// Get confirmation slip by booking ID
+app.get('/api/bookings/:id/slip', async (req, res) => {
+    const bookingId = req.params.id;
+    
+    try {
+        const [slips] = await db.query(`
+            SELECT cs.*, 
+                   (SELECT GROUP_CONCAT(CONCAT(item_name, '|', media_url, '|', media_type)) 
+                    FROM booking_media WHERE booking_id = cs.booking_id) as media_items
+            FROM confirmation_slips cs
+            WHERE cs.booking_id = ?
+        `, [bookingId]);
+        
+        if (slips.length === 0) {
+            return res.json(null);
+        }
+        
+        res.json(slips[0]);
+    } catch (error) {
+        console.error('Error fetching slip:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Get all confirmation slips for admin
+app.get('/api/admin/confirmation-slips', async (req, res) => {
+    try {
+        const [slips] = await db.query(`
+            SELECT cs.*, b.status as booking_status
+            FROM confirmation_slips cs
+            LEFT JOIN bookings b ON cs.booking_id = b.id
+            ORDER BY cs.created_at DESC
+        `);
+        res.json(slips);
+    } catch (error) {
+        console.error('Error loading confirmation slips:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Update confirmation slip status
+app.put('/api/admin/confirmation-slips/:id/status', async (req, res) => {
+    const { id } = req.params;
+    const { status } = req.body;
+    
+    try {
+        await db.query('UPDATE confirmation_slips SET status = ? WHERE id = ?', [status, id]);
+        res.json({ message: 'Slip status updated successfully' });
+    } catch (error) {
+        console.error('Error updating slip status:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Create booking - WITH AUTO SLIP GENERATION ON CONFIRM
 app.post('/api/bookings/create', async (req, res) => {
     const { 
         user_id, relocation_type, package_id, labor_count, 
@@ -214,18 +371,34 @@ app.post('/api/bookings/create', async (req, res) => {
     }
 });
 
+// Get user bookings with confirmation slip data
 app.get('/api/bookings/user/:userId', async (req, res) => {
     const { userId } = req.params;
     try {
         const [bookings] = await db.query(`
-            SELECT b.*, p.package_name, p.price as package_price
+            SELECT b.*, p.package_name, p.price as package_price,
+                   cs.slip_number, cs.truck_name, cs.driver_name, cs.supervisor_name,
+                   cs.status as slip_status
             FROM bookings b
             LEFT JOIN packages p ON b.package_id = p.id
+            LEFT JOIN confirmation_slips cs ON b.id = cs.booking_id
             WHERE b.user_id = ?
             ORDER BY b.created_at DESC
         `, [userId]);
         
-        res.json(bookings);
+        // Format the response to include confirmation_slip object
+        const formattedBookings = bookings.map(booking => ({
+            ...booking,
+            confirmation_slip: booking.slip_number ? {
+                slip_number: booking.slip_number,
+                truck_name: booking.truck_name,
+                driver_name: booking.driver_name,
+                supervisor_name: booking.supervisor_name,
+                status: booking.slip_status
+            } : null
+        }));
+        
+        res.json(formattedBookings);
     } catch (error) {
         console.error('Error loading bookings:', error);
         res.status(500).json({ error: error.message });
@@ -271,50 +444,6 @@ app.post('/api/bookings/media/upload', upload.single('media'), async (req, res) 
             url: mediaUrl, 
             message: `${mediaType === 'photo' ? 'Photo' : 'Video'} uploaded successfully` 
         });
-    } catch (error) {
-        console.error('Upload error:', error);
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// Photo upload endpoint (simplified)
-app.post('/api/upload/photo', upload.single('photo'), async (req, res) => {
-    try {
-        if (!req.file) {
-            return res.status(400).json({ error: 'No file uploaded' });
-        }
-        
-        const { booking_id, item_name } = req.body;
-        const photoUrl = '/uploads/pictures/' + req.file.filename;
-        
-        await db.query(
-            'INSERT INTO booking_media (booking_id, media_type, media_url, item_name) VALUES (?, "photo", ?, ?)',
-            [booking_id, photoUrl, item_name || 'Item']
-        );
-        
-        res.json({ success: true, url: photoUrl, message: 'Photo uploaded successfully' });
-    } catch (error) {
-        console.error('Upload error:', error);
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// Video upload endpoint (simplified)
-app.post('/api/upload/video', upload.single('video'), async (req, res) => {
-    try {
-        if (!req.file) {
-            return res.status(400).json({ error: 'No file uploaded' });
-        }
-        
-        const { booking_id, item_name } = req.body;
-        const videoUrl = '/uploads/videos/' + req.file.filename;
-        
-        await db.query(
-            'INSERT INTO booking_media (booking_id, media_type, media_url, item_name) VALUES (?, "video", ?, ?)',
-            [booking_id, videoUrl, item_name || 'Item']
-        );
-        
-        res.json({ success: true, url: videoUrl, message: 'Video uploaded successfully' });
     } catch (error) {
         console.error('Upload error:', error);
         res.status(500).json({ error: error.message });

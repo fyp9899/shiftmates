@@ -61,7 +61,6 @@ router.delete('/users/:id', adminAuth, async (req, res) => {
     const userId = req.params.id;
     
     try {
-        // Check if user exists
         const [userCheck] = await db.query('SELECT id, firstname, lastname FROM users WHERE id = ?', [userId]);
         if (userCheck.length === 0) {
             return res.status(404).json({ error: 'User not found' });
@@ -69,8 +68,8 @@ router.delete('/users/:id', adminAuth, async (req, res) => {
         
         const userName = `${userCheck[0].firstname} ${userCheck[0].lastname}`;
         
-        // Delete in correct order to avoid foreign key constraints
         await db.query(`DELETE FROM booking_media WHERE booking_id IN (SELECT id FROM bookings WHERE user_id = ?)`, [userId]);
+        await db.query(`DELETE FROM confirmation_slips WHERE booking_id IN (SELECT id FROM bookings WHERE user_id = ?)`, [userId]);
         await db.query(`DELETE FROM reviews WHERE user_id = ?`, [userId]);
         await db.query(`DELETE FROM points_history WHERE user_id = ?`, [userId]);
         await db.query(`DELETE FROM loyalty_points WHERE user_id = ?`, [userId]);
@@ -259,7 +258,84 @@ router.delete('/booking-media/:id', adminAuth, async (req, res) => {
 });
 
 // ============================================
-// EMPLOYEES, VEHICLES, SUPERVISORS, PACKAGES, ADDITIONAL SERVICES, PROMO CODES
+// CONFIRMATION SLIPS
+// ============================================
+
+// Get all confirmation slips
+router.get('/confirmation-slips', adminAuth, async (req, res) => {
+    try {
+        const [slips] = await db.query(`
+            SELECT cs.*, b.status as booking_status
+            FROM confirmation_slips cs
+            LEFT JOIN bookings b ON cs.booking_id = b.id
+            ORDER BY cs.created_at DESC
+        `);
+        res.json(slips);
+    } catch (error) {
+        console.error('Error loading confirmation slips:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Update confirmation slip status
+router.put('/confirmation-slips/:id/status', adminAuth, async (req, res) => {
+    const { id } = req.params;
+    const { status } = req.body;
+    try {
+        await db.query('UPDATE confirmation_slips SET status = ? WHERE id = ?', [status, id]);
+        res.json({ message: 'Slip status updated successfully' });
+    } catch (error) {
+        console.error('Error updating slip status:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// DELETE confirmation slip - ADDED
+router.delete('/confirmation-slips/:id', adminAuth, async (req, res) => {
+    const { id } = req.params;
+    try {
+        // Check if slip exists
+        const [slipCheck] = await db.query('SELECT id, slip_number FROM confirmation_slips WHERE id = ?', [id]);
+        if (slipCheck.length === 0) {
+            return res.status(404).json({ error: 'Confirmation slip not found' });
+        }
+        
+        const slipNumber = slipCheck[0].slip_number;
+        
+        // Delete the slip
+        await db.query('DELETE FROM confirmation_slips WHERE id = ?', [id]);
+        
+        res.json({ message: `Confirmation slip "${slipNumber}" deleted successfully` });
+    } catch (error) {
+        console.error('Error deleting confirmation slip:', error);
+        res.status(500).json({ error: 'Failed to delete confirmation slip: ' + error.message });
+    }
+});
+
+// Get single confirmation slip by ID
+router.get('/confirmation-slips/:id', adminAuth, async (req, res) => {
+    const { id } = req.params;
+    try {
+        const [slips] = await db.query(`
+            SELECT cs.*, b.status as booking_status
+            FROM confirmation_slips cs
+            LEFT JOIN bookings b ON cs.booking_id = b.id
+            WHERE cs.id = ?
+        `, [id]);
+        
+        if (slips.length === 0) {
+            return res.status(404).json({ error: 'Confirmation slip not found' });
+        }
+        
+        res.json(slips[0]);
+    } catch (error) {
+        console.error('Error fetching confirmation slip:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// ============================================
+// EMPLOYEES
 // ============================================
 
 router.get('/employees', adminAuth, async (req, res) => {
@@ -307,6 +383,10 @@ router.delete('/employees/:id', adminAuth, async (req, res) => {
     }
 });
 
+// ============================================
+// VEHICLES
+// ============================================
+
 router.get('/vehicles', adminAuth, async (req, res) => {
     try {
         const [vehicles] = await db.query('SELECT * FROM vehicles ORDER BY id DESC');
@@ -351,6 +431,10 @@ router.delete('/vehicles/:id', adminAuth, async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 });
+
+// ============================================
+// SUPERVISORS
+// ============================================
 
 router.get('/supervisors', adminAuth, async (req, res) => {
     try {
@@ -397,6 +481,10 @@ router.delete('/supervisors/:id', adminAuth, async (req, res) => {
     }
 });
 
+// ============================================
+// PACKAGES
+// ============================================
+
 router.get('/packages', adminAuth, async (req, res) => {
     try {
         const [packages] = await db.query('SELECT * FROM packages ORDER BY id');
@@ -419,6 +507,10 @@ router.put('/packages/:id', adminAuth, async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 });
+
+// ============================================
+// ADDITIONAL SERVICES
+// ============================================
 
 router.get('/additional-services', adminAuth, async (req, res) => {
     try {
@@ -465,6 +557,10 @@ router.delete('/additional-services/:id', adminAuth, async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 });
+
+// ============================================
+// PROMO CODES
+// ============================================
 
 router.get('/promocodes', adminAuth, async (req, res) => {
     try {

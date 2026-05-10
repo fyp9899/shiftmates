@@ -33,6 +33,7 @@ async function checkAdminSession() {
             loadDashboardStats();
             loadUsers();
             loadBookings();
+            loadConfirmationSlips(); // Load confirmation slips on init
         }
     } catch (error) {
         console.error('Error:', error);
@@ -59,6 +60,7 @@ document.getElementById('adminLoginForm')?.addEventListener('submit', async (e) 
             loadDashboardStats();
             loadUsers();
             loadBookings();
+            loadConfirmationSlips();
         } else {
             alert('Invalid credentials. Use Admin / admin');
         }
@@ -277,7 +279,7 @@ function displayInventory(items) {
     }
     
     tableBody.innerHTML = items.map(item => `
-        <table>
+        <tr>
             <td>${item.id}</td>
             <td>${item.customer_name || 'User ' + item.user_id}</td>
             <td>#${item.booking_id || '-'}</td>
@@ -546,22 +548,29 @@ async function deleteMedia(id) {
 }
 
 // ============================================
-// CONFIRMATION SLIPS MANAGEMENT
+// CONFIRMATION SLIPS MANAGEMENT - FIXED
 // ============================================
 
 async function loadConfirmationSlips() {
     try {
+        console.log('Loading confirmation slips...');
         const response = await fetch(`${API_URL}/admin/confirmation-slips`, { 
             credentials: 'include' 
         });
-        if (!response.ok) return;
+        
+        if (!response.ok) {
+            console.error('Failed to load confirmation slips:', response.status);
+            return;
+        }
+        
         allConfirmationSlips = await response.json();
+        console.log('Loaded confirmation slips:', allConfirmationSlips.length);
         displayConfirmationSlips(allConfirmationSlips);
     } catch (error) {
         console.error('Error loading confirmation slips:', error);
         const tableBody = document.querySelector('#confirmationSlipsTable tbody');
         if (tableBody) {
-            tableBody.innerHTML = '<tr class="empty-row"><td colspan="10">Error loading confirmation slips</td></tr>';
+            tableBody.innerHTML = '<tr class="empty-row"><td colspan="10">Error loading confirmation slips: ' + error.message + '</td></tr>';
         }
     }
 }
@@ -571,24 +580,31 @@ function displayConfirmationSlips(slips) {
     if (!tableBody) return;
     
     if (!slips || slips.length === 0) {
-        tableBody.innerHTML = '<tr class="empty-row"><td colspan="10">No confirmation slips found</td></tr>';
+        tableBody.innerHTML = '<tr class="empty-row"><td colspan="10">No confirmation slips found. Generate slips by confirming bookings.</td></tr>';
         return;
     }
     
     tableBody.innerHTML = slips.map(slip => `
         <tr>
-            <td><strong>${slip.slip_number}</strong></td>
-            <td>${slip.customer_name}</td>
-            <td>#${slip.booking_id}</td>
-            <td>${new Date(slip.booking_date).toLocaleDateString()} at ${slip.booking_time}</td>
-            <td>${slip.truck_name || '-'}</td>
-            <td>${slip.driver_name || '-'}</td>
-            <td>${slip.supervisor_name || '-'}</td>
-            <td><strong>RS${slip.total_price}</strong></td>
-            <td><span class="status-badge">${slip.status}</span></td>
+            <td><strong>${slip.slip_number || 'N/A'}</strong></td>
+            <td>${slip.customer_name || 'N/A'}</td>
+            <td>#${slip.booking_id || 'N/A'}</td>
+            <td>${slip.booking_date ? new Date(slip.booking_date).toLocaleDateString() : 'N/A'} at ${slip.booking_time || 'N/A'}</td>
+            <td>${slip.truck_name || 'Not Assigned'}</td>
+            <td>${slip.driver_name || 'Not Assigned'}</td>
+            <td>${slip.supervisor_name || 'Not Assigned'}</td>
+            <td><strong>RS${parseInt(slip.total_price || 0).toLocaleString()}</strong></td>
+            <td><span class="status-badge ${slip.status === 'generated' ? 'status-pending' : (slip.status === 'printed' ? 'status-confirmed' : 'status-cancelled')}">${slip.status || 'generated'}</span></td>
             <td>
-                <button class="btn-edit" onclick="viewSlipDetails(${slip.id})">View Details</button>
-                <button class="btn-update-status" onclick="updateSlipStatus(${slip.id})">Update Status</button>
+                <button class="btn-edit" onclick="viewSlipDetails(${slip.id})">
+                    <i class="fas fa-eye"></i> View Details
+                </button>
+                <button class="btn-update-status" onclick="updateSlipStatus(${slip.id})" style="margin-left: 5px;">
+                    <i class="fas fa-pen"></i> Update Status
+                </button>
+                <button class="btn-delete" onclick="deleteConfirmationSlip(${slip.id})" style="margin-left: 5px;">
+                    <i class="fas fa-trash"></i> Delete
+                </button>
             </td>
         </tr>
     `).join('');
@@ -596,70 +612,73 @@ function displayConfirmationSlips(slips) {
 
 function viewSlipDetails(slipId) {
     const slip = allConfirmationSlips.find(s => s.id === slipId);
-    if (slip) {
-        // Remove existing modal if any
-        const existingModal = document.getElementById('slipDetailModal');
-        if (existingModal) existingModal.remove();
-        
-        const modalHtml = `
-            <div id="slipDetailModal" class="modal" style="display: block;">
-                <div class="modal-content" style="max-width: 550px; max-height: 85vh; overflow-y: auto;">
-                    <span class="close" onclick="closeSlipDetailModal()">&times;</span>
-                    <div style="text-align: center; margin-bottom: 20px; border-bottom: 2px solid #4caf50; padding-bottom: 10px;">
-                        <h2 style="color: #2e7d32;">ShiftMates</h2>
-                        <p>Booking Confirmation Slip</p>
-                        <p><strong>Slip #: ${slip.slip_number}</strong></p>
-                    </div>
-                    
-                    <div style="margin-bottom: 15px;">
-                        <h4 style="color: #333; margin-bottom: 10px;">Customer Information</h4>
-                        <p><strong>Name:</strong> ${slip.customer_name}</p>
-                        <p><strong>Email:</strong> ${slip.customer_email || 'N/A'}</p>
-                        <p><strong>Phone:</strong> ${slip.customer_phone || 'N/A'}</p>
-                    </div>
-                    
-                    <div style="margin-bottom: 15px;">
-                        <h4 style="color: #333; margin-bottom: 10px;">Moving Details</h4>
-                        <p><strong>Type:</strong> ${slip.relocation_type?.toUpperCase()}</p>
-                        <p><strong>Package:</strong> ${slip.package_name}</p>
-                        <p><strong>Labourers:</strong> ${slip.laborers_count}</p>
-                        <p><strong>Date:</strong> ${new Date(slip.booking_date).toLocaleDateString()}</p>
-                        <p><strong>Time:</strong> ${slip.booking_time}</p>
-                        <p><strong>Day:</strong> ${slip.booking_day}</p>
-                    </div>
-                    
-                    <div style="margin-bottom: 15px;">
-                        <h4 style="color: #333; margin-bottom: 10px;">Addresses</h4>
-                        <p><strong>Pickup:</strong> ${slip.pickup_address}</p>
-                        <p><strong>Dropoff:</strong> ${slip.dropoff_address}</p>
-                    </div>
-                    
-                    <div style="background: #f5f5f5; padding: 12px; border-radius: 10px; margin-bottom: 15px;">
-                        <h4 style="color: #333; margin-bottom: 10px;">Assigned Team</h4>
-                        <p><strong>Truck:</strong> ${slip.truck_name} (${slip.truck_registration})</p>
-                        <p><strong>Driver:</strong> ${slip.driver_name} - ${slip.driver_contact}</p>
-                        <p><strong>Supervisor:</strong> ${slip.supervisor_name} - ${slip.supervisor_contact}</p>
-                    </div>
-                    
-                    <div style="text-align: center; border-top: 1px solid #ddd; padding-top: 15px;">
-                        <h3 style="color: #2e7d32;">Total Amount: RS${slip.total_price}</h3>
-                        <p style="font-size: 11px; color: #888; margin-top: 5px;">Generated on: ${new Date(slip.generated_at).toLocaleString()}</p>
-                    </div>
-                    
-                    <div style="display: flex; gap: 10px; margin-top: 15px;">
-                        <button onclick="window.print()" class="btn-submit" style="background: #4caf50; flex: 1;">
-                            <i class="fas fa-print"></i> Print
-                        </button>
-                        <button onclick="closeSlipDetailModal()" class="btn-submit" style="background: #666; flex: 1;">
-                            <i class="fas fa-times"></i> Close
-                        </button>
-                    </div>
+    if (!slip) {
+        alert('Slip details not found');
+        return;
+    }
+    
+    // Remove existing modal if any
+    const existingModal = document.getElementById('slipDetailModal');
+    if (existingModal) existingModal.remove();
+    
+    const modalHtml = `
+        <div id="slipDetailModal" class="modal" style="display: block;">
+            <div class="modal-content" style="max-width: 600px; max-height: 85vh; overflow-y: auto;">
+                <span class="close" onclick="closeSlipDetailModal()">&times;</span>
+                <div style="text-align: center; margin-bottom: 20px; border-bottom: 2px solid #4caf50; padding-bottom: 10px;">
+                    <h2 style="color: #2e7d32;">ShiftMates</h2>
+                    <p>Booking Confirmation Slip</p>
+                    <p><strong>Slip #: ${slip.slip_number || 'N/A'}</strong></p>
+                </div>
+                
+                <div style="margin-bottom: 15px;">
+                    <h4 style="color: #333; margin-bottom: 10px; border-left: 3px solid #4caf50; padding-left: 8px;">Customer Information</h4>
+                    <p><strong>Name:</strong> ${slip.customer_name || 'N/A'}</p>
+                    <p><strong>Email:</strong> ${slip.customer_email || 'N/A'}</p>
+                    <p><strong>Phone:</strong> ${slip.customer_phone || 'N/A'}</p>
+                </div>
+                
+                <div style="margin-bottom: 15px;">
+                    <h4 style="color: #333; margin-bottom: 10px; border-left: 3px solid #4caf50; padding-left: 8px;">Moving Details</h4>
+                    <p><strong>Type:</strong> ${slip.relocation_type?.toUpperCase() || 'N/A'}</p>
+                    <p><strong>Package:</strong> ${slip.package_name || 'Standard'}</p>
+                    <p><strong>Labourers:</strong> ${slip.laborers_count || '2'}</p>
+                    <p><strong>Date:</strong> ${slip.booking_date ? new Date(slip.booking_date).toLocaleDateString() : 'N/A'}</p>
+                    <p><strong>Time:</strong> ${slip.booking_time || 'N/A'}</p>
+                    <p><strong>Day:</strong> ${slip.booking_day || 'N/A'}</p>
+                </div>
+                
+                <div style="margin-bottom: 15px;">
+                    <h4 style="color: #333; margin-bottom: 10px; border-left: 3px solid #4caf50; padding-left: 8px;">Addresses</h4>
+                    <p><strong>Pickup:</strong> ${slip.pickup_address || 'N/A'}</p>
+                    <p><strong>Dropoff:</strong> ${slip.dropoff_address || 'N/A'}</p>
+                </div>
+                
+                <div style="background: #f5f5f5; padding: 12px; border-radius: 10px; margin-bottom: 15px;">
+                    <h4 style="color: #333; margin-bottom: 10px;">Assigned Team</h4>
+                    <p><strong>Truck:</strong> ${slip.truck_name || 'Not Assigned'} (${slip.truck_registration || 'N/A'})</p>
+                    <p><strong>Driver:</strong> ${slip.driver_name || 'Not Assigned'} - ${slip.driver_contact || 'N/A'}</p>
+                    <p><strong>Supervisor:</strong> ${slip.supervisor_name || 'Not Assigned'} - ${slip.supervisor_contact || 'N/A'}</p>
+                </div>
+                
+                <div style="text-align: center; border-top: 1px solid #ddd; padding-top: 15px;">
+                    <h3 style="color: #2e7d32;">Total Amount: RS${parseInt(slip.total_price || 0).toLocaleString()}</h3>
+                    <p style="font-size: 11px; color: #888; margin-top: 5px;">Generated on: ${slip.created_at ? new Date(slip.created_at).toLocaleString() : 'N/A'}</p>
+                </div>
+                
+                <div style="display: flex; gap: 10px; margin-top: 15px;">
+                    <button onclick="window.print()" class="btn-submit" style="background: #4caf50; flex: 1;">
+                        <i class="fas fa-print"></i> Print Slip
+                    </button>
+                    <button onclick="closeSlipDetailModal()" class="btn-submit" style="background: #666; flex: 1;">
+                        <i class="fas fa-times"></i> Close
+                    </button>
                 </div>
             </div>
-        `;
-        
-        document.body.insertAdjacentHTML('beforeend', modalHtml);
-    }
+        </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
 }
 
 function closeSlipDetailModal() {
@@ -682,14 +701,37 @@ async function updateSlipStatus(slipId) {
                 loadConfirmationSlips();
                 alert('Slip status updated successfully');
             } else {
-                alert('Error updating slip status');
+                const error = await response.json();
+                alert('Error updating slip status: ' + (error.error || 'Unknown error'));
             }
         } catch (error) {
             console.error('Error:', error);
-            alert('Error updating slip status');
+            alert('Error updating slip status: ' + error.message);
         }
     } else if (newStatus) {
         alert('Invalid status. Use: generated, printed, cancelled');
+    }
+}
+
+async function deleteConfirmationSlip(slipId) {
+    if (confirm('Are you sure you want to delete this confirmation slip? This action cannot be undone.')) {
+        try {
+            const response = await fetch(`${API_URL}/admin/confirmation-slips/${slipId}`, {
+                method: 'DELETE',
+                credentials: 'include'
+            });
+            
+            if (response.ok) {
+                loadConfirmationSlips();
+                alert('Confirmation slip deleted successfully');
+            } else {
+                const error = await response.json();
+                alert('Error deleting slip: ' + (error.error || 'Unknown error'));
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            alert('Error deleting slip: ' + error.message);
+        }
     }
 }
 
@@ -756,20 +798,23 @@ function displayBookings(bookings) {
 
 async function viewBookingSlip(bookingId) {
     try {
-        // First check if slip exists
         const response = await fetch(`${API_URL}/bookings/${bookingId}/slip`, {
             credentials: 'include'
         });
         const slip = await response.json();
         
         if (slip && slip.id) {
+            // Add to allConfirmationSlips if not already there
+            if (!allConfirmationSlips.find(s => s.id === slip.id)) {
+                allConfirmationSlips.unshift(slip);
+            }
             viewSlipDetails(slip.id);
         } else {
             alert('No confirmation slip found for this booking. Please confirm the booking first.');
         }
     } catch (error) {
         console.error('Error:', error);
-        alert('Error loading slip');
+        alert('Error loading slip: ' + error.message);
     }
 }
 
@@ -792,6 +837,7 @@ function searchBookings() {
 function openStatusModal(bookingId) {
     document.getElementById('statusModal').style.display = 'block';
     document.getElementById('statusBookingId').value = bookingId;
+    document.getElementById('bookingStatus').value = 'confirmed';
     document.body.style.overflow = 'hidden';
 }
 
@@ -823,10 +869,14 @@ async function updateBookingStatus() {
                     body: JSON.stringify({})
                 });
                 
+                const slipResult = await generateResponse.json();
+                
                 if (generateResponse.ok) {
                     alert('Booking confirmed and confirmation slip generated successfully!');
+                    // Refresh confirmation slips
+                    await loadConfirmationSlips();
                 } else {
-                    alert('Booking status updated but slip generation failed');
+                    alert('Booking status updated but slip generation failed: ' + (slipResult.error || 'Unknown error'));
                 }
             } else {
                 alert('Status updated successfully');
@@ -835,14 +885,15 @@ async function updateBookingStatus() {
             closeStatusModal();
             loadBookings();
             loadDashboardStats();
-            loadConfirmationSlips();
+            // Refresh confirmation slips
+            await loadConfirmationSlips();
         } else {
             const error = await response.json();
             alert(error.error || 'Error updating status');
         }
     } catch (error) {
         console.error('Error:', error);
-        alert('Error updating status');
+        alert('Error updating status: ' + error.message);
     }
 }
 
@@ -882,8 +933,8 @@ function displayEmployees(employees) {
             <td>${emp.employee_cnic}</td>
             <td>${emp.employee_type}</td>
             <td>RS${emp.employee_charge_per_visit}</td>
-            <td><span class="status-badge">${emp.status}</span>
-                        <td>
+            <td><span class="status-badge">${emp.status}</span></td>
+            <td>
                 <button class="btn-edit" onclick="editEmployee(${emp.id})">Edit</button>
                 <button class="btn-delete" onclick="deleteEmployee(${emp.id})">Delete</button>
             </td>
