@@ -2,13 +2,9 @@ const express = require('express');
 const cors = require('cors');
 const session = require('express-session');
 const path = require('path');
-const dotenv = require('dotenv');
 const multer = require('multer');
 const fs = require('fs');
 const bcrypt = require('bcryptjs');
-
-// Load .env from root directory
-dotenv.config({ path: path.join(__dirname, '.env') });
 
 const app = express();
 const db = require('./db');
@@ -55,7 +51,7 @@ const upload = multer({
 
 // Middleware
 app.use(cors({
-    origin: ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:3002', 'http://127.0.0.1:3000'],
+    origin: ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:3002', 'http://127.0.0.1:3000', 'https://shiftmates.onrender.com'],
     credentials: true
 }));
 app.use(express.json());
@@ -71,8 +67,10 @@ app.use(session({
 app.use(express.static(rootDir));
 app.use('/css', express.static(path.join(rootDir, 'website/css')));
 app.use('/js', express.static(path.join(rootDir, 'website/js')));
+app.use('/app', express.static(path.join(rootDir, 'app')));
 app.use('/app/css', express.static(path.join(rootDir, 'app/css')));
 app.use('/app/js', express.static(path.join(rootDir, 'app/js')));
+app.use('/cms', express.static(path.join(rootDir, 'cms')));
 app.use('/cms/css', express.static(path.join(rootDir, 'cms/css')));
 app.use('/cms/js', express.static(path.join(rootDir, 'cms/js')));
 app.use('/uploads', express.static(path.join(rootDir, 'uploads')));
@@ -92,6 +90,73 @@ app.get('/api/packages', async (req, res) => {
     try {
         const [packages] = await db.query('SELECT * FROM packages WHERE package_name != "customized" OR (package_name = "customized" AND price > 0)');
         res.json(packages);
+    } catch (error) {
+        console.error('Error fetching packages:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// ============================================
+// EMPLOYEES ROUTES
+// ============================================
+app.get('/api/employees', async (req, res) => {
+    try {
+        const [employees] = await db.query('SELECT * FROM employees WHERE status = "available"');
+        res.json(employees);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.get('/api/employees/type/:type', async (req, res) => {
+    const { type } = req.params;
+    try {
+        const [employees] = await db.query('SELECT * FROM employees WHERE employee_type = ? AND status = "available"', [type]);
+        res.json(employees);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// ============================================
+// VEHICLES ROUTES
+// ============================================
+app.get('/api/vehicles', async (req, res) => {
+    try {
+        const [vehicles] = await db.query('SELECT * FROM vehicles WHERE status = "available"');
+        res.json(vehicles);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.get('/api/vehicles/size/:size', async (req, res) => {
+    const { size } = req.params;
+    try {
+        const [vehicles] = await db.query('SELECT * FROM vehicles WHERE vehicle_size = ? AND status = "available"', [size]);
+        res.json(vehicles);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// ============================================
+// SUPERVISORS ROUTES
+// ============================================
+app.get('/api/supervisors', async (req, res) => {
+    try {
+        const [supervisors] = await db.query('SELECT * FROM supervisors WHERE status = "available"');
+        res.json(supervisors);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.get('/api/supervisors/city/:city', async (req, res) => {
+    const { city } = req.params;
+    try {
+        const [supervisors] = await db.query('SELECT * FROM supervisors WHERE supervisor_city = ? AND status = "available"', [city]);
+        res.json(supervisors);
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
@@ -160,15 +225,6 @@ app.get('/api/bookings/user/:userId', async (req, res) => {
             ORDER BY b.created_at DESC
         `, [userId]);
         
-        // Also get confirmation slips for each booking
-        for (let booking of bookings) {
-            const [slips] = await db.query(
-                'SELECT * FROM confirmation_slips WHERE booking_id = ? ORDER BY generated_at DESC LIMIT 1',
-                [booking.id]
-            );
-            booking.confirmation_slip = slips[0] || null;
-        }
-        
         res.json(bookings);
     } catch (error) {
         console.error('Error loading bookings:', error);
@@ -181,183 +237,6 @@ app.post('/api/bookings/:id/cancel', async (req, res) => {
     try {
         await db.query('UPDATE bookings SET status = "cancelled" WHERE id = ?', [id]);
         res.json({ message: 'Booking cancelled successfully' });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// ============================================
-// CONFIRMATION SLIP ROUTES
-// ============================================
-
-// Generate confirmation slip when booking is confirmed
-app.post('/api/bookings/:id/generate-slip', async (req, res) => {
-    const bookingId = req.params.id;
-    const { supervisor_id, vehicle_id } = req.body;
-    
-    try {
-        // Get booking details with user info
-        const [bookings] = await db.query(`
-            SELECT b.*, u.firstname, u.lastname, u.email, u.contact_number, p.package_name
-            FROM bookings b
-            JOIN users u ON b.user_id = u.id
-            LEFT JOIN packages p ON b.package_id = p.id
-            WHERE b.id = ?
-        `, [bookingId]);
-        
-        if (bookings.length === 0) {
-            return res.status(404).json({ error: 'Booking not found' });
-        }
-        
-        const booking = bookings[0];
-        
-        // Get vehicle details if assigned
-        let vehicle = null;
-        if (vehicle_id) {
-            const [vehicles] = await db.query(
-                'SELECT * FROM vehicles WHERE id = ?',
-                [vehicle_id]
-            );
-            vehicle = vehicles[0] || null;
-        } else {
-            // Try to get a vehicle based on vehicle size
-            const [vehicles] = await db.query(
-                'SELECT * FROM vehicles WHERE vehicle_size = ? AND status = "available" LIMIT 1',
-                [booking.vehicle_size || 'medium']
-            );
-            vehicle = vehicles[0] || null;
-        }
-        
-        // Get supervisor details if assigned
-        let supervisor = null;
-        if (supervisor_id) {
-            const [supervisors] = await db.query(
-                'SELECT * FROM supervisors WHERE id = ?',
-                [supervisor_id]
-            );
-            supervisor = supervisors[0] || null;
-        } else {
-            // Try to get an available supervisor
-            const [supervisors] = await db.query(
-                'SELECT * FROM supervisors WHERE status = "available" LIMIT 1'
-            );
-            supervisor = supervisors[0] || null;
-        }
-        
-        // Generate unique slip number
-        const slipNumber = 'SFT-' + Date.now() + '-' + Math.floor(Math.random() * 1000);
-        
-        // Get day of week from booking date
-        const bookingDate = new Date(booking.booking_date);
-        const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-        const bookingDay = days[bookingDate.getDay()];
-        
-        // Insert confirmation slip
-        const [result] = await db.query(`
-            INSERT INTO confirmation_slips (
-                booking_id, slip_number, customer_name, customer_email, customer_phone,
-                pickup_address, dropoff_address, booking_date, booking_time, booking_day,
-                truck_name, truck_registration, driver_name, driver_contact,
-                laborers_count, supervisor_name, supervisor_contact, total_price,
-                package_name, relocation_type, status
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'generated')
-        `, [
-            bookingId, slipNumber,
-            `${booking.firstname} ${booking.lastname}`,
-            booking.email, booking.contact_number,
-            booking.pickup_address, booking.dropoff_address,
-            booking.booking_date, booking.booking_time, bookingDay,
-            vehicle ? vehicle.vehicle_name : 'Truck will be assigned',
-            vehicle ? vehicle.vehicle_registration_number : 'N/A',
-            vehicle ? vehicle.driver_name : 'Driver will be assigned',
-            vehicle ? vehicle.driver_contact : 'N/A',
-            booking.labor_count || 2,
-            supervisor ? supervisor.supervisor_name : 'Supervisor will be assigned',
-            supervisor ? supervisor.supervisor_contact : 'N/A',
-            booking.total_price,
-            booking.package_name || 'Standard',
-            booking.relocation_type
-        ]);
-        
-        // Update vehicle and supervisor status to busy if assigned
-        if (vehicle && vehicle.id) {
-            await db.query('UPDATE vehicles SET status = "busy" WHERE id = ?', [vehicle.id]);
-        }
-        if (supervisor && supervisor.id) {
-            await db.query('UPDATE supervisors SET status = "assigned" WHERE id = ?', [supervisor.id]);
-        }
-        
-        // Get the generated slip
-        const [slips] = await db.query('SELECT * FROM confirmation_slips WHERE id = ?', [result.insertId]);
-        
-        res.json({ 
-            success: true, 
-            message: 'Confirmation slip generated successfully',
-            slip: slips[0]
-        });
-        
-    } catch (error) {
-        console.error('Error generating slip:', error);
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// Get confirmation slip by booking ID
-app.get('/api/bookings/:id/slip', async (req, res) => {
-    const { id } = req.params;
-    try {
-        const [slips] = await db.query(
-            'SELECT * FROM confirmation_slips WHERE booking_id = ? ORDER BY generated_at DESC LIMIT 1',
-            [id]
-        );
-        res.json(slips[0] || null);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// Get all confirmation slips for admin
-app.get('/api/admin/confirmation-slips', async (req, res) => {
-    try {
-        const [slips] = await db.query(`
-            SELECT cs.*, b.status as booking_status
-            FROM confirmation_slips cs
-            JOIN bookings b ON cs.booking_id = b.id
-            ORDER BY cs.generated_at DESC
-        `);
-        res.json(slips);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// Update slip status
-app.put('/api/admin/confirmation-slips/:id/status', async (req, res) => {
-    const { id } = req.params;
-    const { status } = req.body;
-    try {
-        await db.query('UPDATE confirmation_slips SET status = ? WHERE id = ?', [status, id]);
-        res.json({ message: 'Slip status updated' });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// Get available vehicles for assignment
-app.get('/api/admin/available-vehicles', async (req, res) => {
-    try {
-        const [vehicles] = await db.query('SELECT * FROM vehicles WHERE status = "available"');
-        res.json(vehicles);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// Get available supervisors for assignment
-app.get('/api/admin/available-supervisors', async (req, res) => {
-    try {
-        const [supervisors] = await db.query('SELECT * FROM supervisors WHERE status = "available"');
-        res.json(supervisors);
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
@@ -392,6 +271,50 @@ app.post('/api/bookings/media/upload', upload.single('media'), async (req, res) 
             url: mediaUrl, 
             message: `${mediaType === 'photo' ? 'Photo' : 'Video'} uploaded successfully` 
         });
+    } catch (error) {
+        console.error('Upload error:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Photo upload endpoint (simplified)
+app.post('/api/upload/photo', upload.single('photo'), async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ error: 'No file uploaded' });
+        }
+        
+        const { booking_id, item_name } = req.body;
+        const photoUrl = '/uploads/pictures/' + req.file.filename;
+        
+        await db.query(
+            'INSERT INTO booking_media (booking_id, media_type, media_url, item_name) VALUES (?, "photo", ?, ?)',
+            [booking_id, photoUrl, item_name || 'Item']
+        );
+        
+        res.json({ success: true, url: photoUrl, message: 'Photo uploaded successfully' });
+    } catch (error) {
+        console.error('Upload error:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Video upload endpoint (simplified)
+app.post('/api/upload/video', upload.single('video'), async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ error: 'No file uploaded' });
+        }
+        
+        const { booking_id, item_name } = req.body;
+        const videoUrl = '/uploads/videos/' + req.file.filename;
+        
+        await db.query(
+            'INSERT INTO booking_media (booking_id, media_type, media_url, item_name) VALUES (?, "video", ?, ?)',
+            [booking_id, videoUrl, item_name || 'Item']
+        );
+        
+        res.json({ success: true, url: videoUrl, message: 'Video uploaded successfully' });
     } catch (error) {
         console.error('Upload error:', error);
         res.status(500).json({ error: error.message });
@@ -500,11 +423,11 @@ app.get('/api/inventory/user/:userId', async (req, res) => {
 });
 
 app.post('/api/inventory/add', async (req, res) => {
-    const { user_id, room_name, item_name, is_fragile, special_handling, quantity } = req.body;
+    const { user_id, room_name, item_name, is_fragile, special_handling } = req.body;
     try {
         const [result] = await db.query(
-            'INSERT INTO inventory_items (user_id, room_name, item_name, is_fragile, special_handling, quantity, status) VALUES (?, ?, ?, ?, ?, ?, "pending")',
-            [user_id, room_name, item_name, is_fragile || false, special_handling || '', quantity || 1]
+            'INSERT INTO inventory_items (user_id, room_name, item_name, is_fragile, special_handling, status) VALUES (?, ?, ?, ?, ?, "pending")',
+            [user_id, room_name, item_name, is_fragile || false, special_handling || '']
         );
         res.json({ message: 'Item added', id: result.insertId });
     } catch (error) {
@@ -578,6 +501,35 @@ app.post('/api/verify-promo', async (req, res) => {
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
+});
+
+// ============================================
+// CALCULATE PRICE ROUTE
+// ============================================
+
+app.post('/api/calculate-price', (req, res) => {
+    const { distance, rooms, floor, hasElevator, packageType } = req.body;
+    
+    let basePrice = 5000;
+    if (packageType === 'gold') basePrice = 10000;
+    else if (packageType === 'platinum') basePrice = 20000;
+    
+    const distanceCharge = (distance || 10) * 50;
+    const roomsCharge = (rooms || 2) * 500;
+    const floorCharge = ((floor || 1) - 1) * 200;
+    const elevatorDiscount = hasElevator ? 300 : 0;
+    const total = basePrice + distanceCharge + roomsCharge + floorCharge - elevatorDiscount;
+    
+    res.json({
+        total: total,
+        breakdown: {
+            basePrice: basePrice,
+            distanceCharge: distanceCharge,
+            roomsCharge: roomsCharge,
+            floorCharge: floorCharge,
+            elevatorDiscount: elevatorDiscount
+        }
+    });
 });
 
 // ============================================
