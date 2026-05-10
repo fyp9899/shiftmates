@@ -57,11 +57,29 @@
                 <button class="nav-link" data-section="packages">
                     <i class="fas fa-gift"></i> Packages
                 </button>
+                <button class="nav-link" data-section="additionalServices">
+                    <i class="fas fa-tools"></i> Additional Services
+                </button>
                 <button class="nav-link" data-section="bookings">
                     <i class="fas fa-calendar-check"></i> Bookings
                 </button>
+                <button class="nav-link" data-section="inventory">
+                    <i class="fas fa-boxes"></i> Inventory
+                </button>
+                <button class="nav-link" data-section="loyalty">
+                    <i class="fas fa-gem"></i> Loyalty
+                </button>
+                <button class="nav-link" data-section="promoCodes">
+                    <i class="fas fa-tag"></i> Promo Codes
+                </button>
+                <button class="nav-link" data-section="reviews">
+                    <i class="fas fa-star"></i> Reviews
+                </button>
                 <button class="nav-link" data-section="media">
                     <i class="fas fa-images"></i> Media
+                </button>
+                <button class="nav-link" data-section="confirmationSlips">
+                    <i class="fas fa-file-alt"></i> Confirmation Slips
                 </button>
             </nav>
             <button class="logout-btn" onclick="adminLogout()">
@@ -111,6 +129,20 @@
                                 <p>Completed</p>
                             </div>
                         </div>
+                        <div class="stat-card">
+                            <i class="fas fa-gem"></i>
+                            <div class="stat-info">
+                                <h3 id="totalPoints">0</h3>
+                                <p>Loyalty Points</p>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <i class="fas fa-star"></i>
+                            <div class="stat-info">
+                                <h3 id="avgRating">0</h3>
+                                <p>Avg Rating</p>
+                            </div>
+                        </div>
                     </div>
 
                     <div class="recent-section">
@@ -130,14 +162,31 @@
                 <div id="usersSection" class="section">
                     <div class="section-header">
                         <h4>Manage Users</h4>
-                        <button class="btn-refresh" onclick="loadUsers()">
-                            <i class="fas fa-sync-alt"></i> Refresh
-                        </button>
+                        <div class="header-actions">
+                            <div class="search-box">
+                                <i class="fas fa-search"></i>
+                                <input type="text" id="userSearchInput" placeholder="Search by name, email, phone..." onkeyup="searchUsers()">
+                            </div>
+                            <button class="btn-refresh" onclick="loadUsers()">
+                                <i class="fas fa-sync-alt"></i> Refresh
+                            </button>
+                        </div>
                     </div>
                     <div class="table-container">
                         <table id="usersTable">
                             <thead>
-                                <tr><th>ID</th><th>Name</th><th>Email</th><th>Phone</th><th>City</th><th>CNIC</th><th>Registered</th></tr>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Name</th>
+                                    <th>Email</th>
+                                    <th>Phone</th>
+                                    <th>City</th>
+                                    <th>CNIC</th>
+                                    <th>Points</th>
+                                    <th>Tier</th>
+                                    <th>Registered</th>
+                                    <th>Actions</th>
+                                </tr>
                             </thead>
                             <tbody></tbody>
                         </table>
@@ -213,18 +262,124 @@
                     </div>
                 </div>
 
+                <!-- Additional Services Section -->
+                <div id="additionalServicesSection" class="section">
+                    <div class="section-header">
+                        <h4>Manage Additional Services</h4>
+                        <button class="btn-add" onclick="openAdditionalServiceModal()">
+                            <i class="fas fa-plus"></i> Add Service
+                        </button>
+                    </div>
+                    <div class="table-container">
+                        <table id="additionalServicesTable">
+                            <thead>
+                                <tr><th>ID</th><th>Service Name</th><th>Service Type</th><th>Price (RS)</th><th>Description</th><th>Actions</th></tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+
                 <!-- Bookings Section -->
                 <div id="bookingsSection" class="section">
                     <div class="section-header">
                         <h4>Manage Bookings</h4>
-                        <button class="btn-refresh" onclick="loadBookings()">
-                            <i class="fas fa-sync-alt"></i> Refresh
-                        </button>
+                        <div class="header-actions">
+                            <div class="search-box">
+                                <i class="fas fa-search"></i>
+                                <input type="text" id="bookingSearchInput" placeholder="Search by ID, customer, status..." onkeyup="searchBookings()">
+                            </div>
+                            <button class="btn-refresh" onclick="loadBookings()">
+                                <i class="fas fa-sync-alt"></i> Refresh
+                            </button>
+                        </div>
                     </div>
                     <div class="table-container">
                         <table id="bookingsTable">
                             <thead>
-                                <tr><th>ID</th><th>Customer</th><th>Type</th><th>Package</th><th>Pickup</th><th>Dropoff</th><th>Date</th><th>Status</th><th>Actions</th></tr>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Customer</th>
+                                    <th>Type</th>
+                                    <th>Package</th>
+                                    <th>Vehicle</th>
+                                    <th>Date</th>
+                                    <th>Total</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Inventory Section -->
+                <div id="inventorySection" class="section">
+                    <div class="section-header">
+                        <h4>Customer Inventory Items</h4>
+                        <button class="btn-refresh" onclick="loadInventory()">
+                            <i class="fas fa-sync-alt"></i> Refresh
+                        </button>
+                    </div>
+                    <div class="table-container">
+                        <table id="inventoryTable">
+                            <thead>
+                                <tr><th>ID</th><th>Customer</th><th>Booking ID</th><th>Room</th><th>Item Name</th><th>Fragile</th><th>Status</th><th>Actions</th></tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Loyalty Section -->
+                <div id="loyaltySection" class="section">
+                    <div class="section-header">
+                        <h4>Loyalty Points Management</h4>
+                        <button class="btn-refresh" onclick="loadLoyalty()">
+                            <i class="fas fa-sync-alt"></i> Refresh
+                        </button>
+                    </div>
+                    <div class="table-container">
+                        <table id="loyaltyTable">
+                            <thead>
+                                <tr><th>User ID</th><th>User Name</th><th>Points</th><th>Tier</th><th>Referral Code</th><th>Actions</th></tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Promo Codes Section -->
+                <div id="promoCodesSection" class="section">
+                    <div class="section-header">
+                        <h4>Manage Promo Codes</h4>
+                        <button class="btn-add" onclick="openPromoCodeModal()">
+                            <i class="fas fa-plus"></i> Add Promo Code
+                        </button>
+                    </div>
+                    <div class="table-container">
+                        <table id="promoCodesTable">
+                            <thead>
+                                <tr><th>ID</th><th>Code</th><th>Discount %</th><th>Valid Until</th><th>Usage Limit</th><th>Used Count</th><th>Active</th><th>Actions</th></tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Reviews Section -->
+                <div id="reviewsSection" class="section">
+                    <div class="section-header">
+                        <h4>Customer Reviews</h4>
+                        <button class="btn-refresh" onclick="loadReviews()">
+                            <i class="fas fa-sync-alt"></i> Refresh
+                        </button>
+                    </div>
+                    <div class="table-container">
+                        <table id="reviewsTable">
+                            <thead>
+                                <tr><th>ID</th><th>Customer</th><th>Booking ID</th><th>Rating</th><th>Comment</th><th>Date</th><th>Status</th><th>Actions</th></tr>
                             </thead>
                             <tbody></tbody>
                         </table>
@@ -242,7 +397,42 @@
                     <div class="table-container">
                         <table id="mediaTable">
                             <thead>
-                                <tr><th>ID</th><th>Customer Name</th><th>Contact</th><th>Package</th><th>Pictures</th><th>Videos</th><th>Date</th></tr>
+                                <tr><th>ID</th><th>Customer Name</th><th>Booking ID</th><th>Item</th><th>Media Type</th><th>Uploaded</th><th>Actions</th></tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Confirmation Slips Section -->
+                <div id="confirmationSlipsSection" class="section">
+                    <div class="section-header">
+                        <h4>Booking Confirmation Slips</h4>
+                        <div class="header-actions">
+                            <div class="search-box">
+                                <i class="fas fa-search"></i>
+                                <input type="text" id="slipSearchInput" placeholder="Search by slip #, customer..." onkeyup="searchSlips()">
+                            </div>
+                            <button class="btn-refresh" onclick="loadConfirmationSlips()">
+                                <i class="fas fa-sync-alt"></i> Refresh
+                            </button>
+                        </div>
+                    </div>
+                    <div class="table-container">
+                        <table id="confirmationSlipsTable">
+                            <thead>
+                                <tr>
+                                    <th>Slip #</th>
+                                    <th>Customer Name</th>
+                                    <th>Booking ID</th>
+                                    <th>Date & Time</th>
+                                    <th>Truck</th>
+                                    <th>Driver</th>
+                                    <th>Supervisor</th>
+                                    <th>Total Price</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
                             </thead>
                             <tbody></tbody>
                         </table>
@@ -286,6 +476,10 @@
                         <option value="Cleaner">Cleaner</option>
                         <option value="Packer">Packer</option>
                     </select>
+                </div>
+                <div class="form-group">
+                    <label>Charge per Visit (RS)</label>
+                    <input type="number" id="empCharge" value="500">
                 </div>
                 <div class="form-group">
                     <label>Status</label>
@@ -404,6 +598,91 @@
         </div>
     </div>
 
+    <!-- Package Modal -->
+    <div id="packageModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closePackageModal()">&times;</span>
+            <h3>Edit Package</h3>
+            <input type="hidden" id="packageId">
+            <div class="form-group">
+                <label>Price (RS)</label>
+                <input type="number" id="packagePrice" required step="1000">
+            </div>
+            <div class="form-group">
+                <label>Number of Labourers</label>
+                <input type="number" id="packageLaborers" required min="1" max="20">
+            </div>
+            <div class="form-group">
+                <label>Truck Size</label>
+                <select id="packageTruckSize">
+                    <option value="">Select Truck Size</option>
+                    <option value="small">Small Truck</option>
+                    <option value="medium">Medium Truck</option>
+                    <option value="large">Large Truck</option>
+                    <option value="custom">Custom</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Insurance Type</label>
+                <select id="packageInsurance">
+                    <option value="">Select Insurance</option>
+                    <option value="basic">Basic Insurance</option>
+                    <option value="premium">Premium Insurance</option>
+                    <option value="full">Full Insurance</option>
+                    <option value="custom">Custom Insurance</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Packing Materials</label>
+                <select id="packagePackingMaterials">
+                    <option value="No">No</option>
+                    <option value="Yes">Yes</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Furniture Assembly</label>
+                <select id="packageFurnitureAssembly">
+                    <option value="No">No</option>
+                    <option value="Yes">Yes</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Description</label>
+                <textarea id="packageDescription" rows="4" placeholder="Package description..."></textarea>
+            </div>
+            <button onclick="updatePackage()" class="btn-submit">Update Package</button>
+        </div>
+    </div>
+
+    <!-- Additional Service Modal -->
+    <div id="additionalServiceModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeAdditionalServiceModal()">&times;</span>
+            <h3>Add/Edit Additional Service</h3>
+            <input type="hidden" id="serviceId">
+            <div class="form-group">
+                <label>Service Name *</label>
+                <input type="text" id="serviceName" required>
+            </div>
+            <div class="form-group">
+                <label>Service Type</label>
+                <select id="serviceType">
+                    <option value="home">Home</option>
+                    <option value="office">Office</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Price (RS) *</label>
+                <input type="number" id="servicePrice" required>
+            </div>
+            <div class="form-group">
+                <label>Description</label>
+                <textarea id="serviceDescription" rows="3" placeholder="Service description..."></textarea>
+            </div>
+            <button onclick="saveAdditionalService()" class="btn-submit">Save Service</button>
+        </div>
+    </div>
+
     <!-- Status Modal -->
     <div id="statusModal" class="modal">
         <div class="modal-content small">
@@ -424,70 +703,59 @@
         </div>
     </div>
 
-    <!-- Package Modal - Complete with all fields -->
-    <div id="packageModal" class="modal">
+    <!-- Promo Code Modal -->
+    <div id="promoCodeModal" class="modal">
         <div class="modal-content">
-            <span class="close" onclick="closePackageModal()">&times;</span>
-            <h3>Edit Package</h3>
-            <input type="hidden" id="packageId">
-            
+            <span class="close" onclick="closePromoCodeModal()">&times;</span>
+            <h3>Add/Edit Promo Code</h3>
+            <input type="hidden" id="promoId">
             <div class="form-group">
-                <label>Price (RS)</label>
-                <input type="number" id="packagePrice" required step="1000">
+                <label>Promo Code *</label>
+                <input type="text" id="promoCode" required placeholder="SAVE10">
             </div>
-            
             <div class="form-group">
-                <label>Number of Labourers</label>
-                <input type="number" id="packageLaborers" required min="1" max="20">
+                <label>Discount Percentage *</label>
+                <input type="number" id="promoDiscount" required min="1" max="100">
             </div>
-            
             <div class="form-group">
-                <label>Truck Size</label>
-                <select id="packageTruckSize">
-                    <option value="">Select Truck Size</option>
-                    <option value="small">Small Truck</option>
-                    <option value="medium">Medium Truck</option>
-                    <option value="large">Large Truck</option>
-                    <option value="custom">Custom</option>
+                <label>Valid Until</label>
+                <input type="date" id="promoValidUntil">
+            </div>
+            <div class="form-group">
+                <label>Usage Limit</label>
+                <input type="number" id="promoUsageLimit" value="100">
+            </div>
+            <div class="form-group">
+                <label>Status</label>
+                <select id="promoStatus">
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
                 </select>
             </div>
-            
-            <div class="form-group">
-                <label>Insurance Type</label>
-                <select id="packageInsurance">
-                    <option value="">Select Insurance</option>
-                    <option value="basic">Basic Insurance</option>
-                    <option value="premium">Premium Insurance</option>
-                    <option value="full">Full Insurance</option>
-                    <option value="custom">Custom Insurance</option>
-                </select>
-            </div>
-            
-            <div class="form-group">
-                <label>Packing Materials</label>
-                <select id="packagePackingMaterials">
-                    <option value="No">No</option>
-                    <option value="Yes">Yes</option>
-                </select>
-            </div>
-            
-            <div class="form-group">
-                <label>Furniture Assembly</label>
-                <select id="packageFurnitureAssembly">
-                    <option value="No">No</option>
-                    <option value="Yes">Yes</option>
-                </select>
-            </div>
-            
-            <div class="form-group">
-                <label>Description</label>
-                <textarea id="packageDescription" rows="4" placeholder="Package description..."></textarea>
-            </div>
-            
-            <button onclick="updatePackage()" class="btn-submit">Update Package</button>
+            <button onclick="savePromoCode()" class="btn-submit">Save Promo Code</button>
         </div>
     </div>
 
+    <!-- Points Modal -->
+    <div id="pointsModal" class="modal">
+        <div class="modal-content small">
+            <span class="close" onclick="closePointsModal()">&times;</span>
+            <h3>Update Loyalty Points</h3>
+            <input type="hidden" id="pointsUserId">
+            <div class="form-group">
+                <label>Add/Remove Points</label>
+                <input type="number" id="pointsAmount" placeholder="Enter points (use - for deduct)">
+            </div>
+            <div class="form-group">
+                <label>Reason</label>
+                <textarea id="pointsReason" rows="2" placeholder="Reason for points update"></textarea>
+            </div>
+            <button onclick="updateUserPoints()" class="btn-submit">Update Points</button>
+        </div>
+    </div>
+
+    <!-- Slip Detail Modal (will be dynamically added) -->
+    
     <script src="js/cms.js"></script>
 </body>
 </html>

@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
     <title>ShiftMates - Relocation App</title>
     <link rel="stylesheet" href="css/app-style.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -128,6 +128,10 @@
                     <i class="fas fa-calendar-check"></i>
                     <span>Bookings</span>
                 </button>
+                <button class="nav-item" data-page="inventory">
+                    <i class="fas fa-boxes"></i>
+                    <span>Inventory</span>
+                </button>
                 <button class="nav-item" data-page="profile">
                     <i class="fas fa-user"></i>
                     <span>Profile</span>
@@ -146,19 +150,70 @@
                     </button>
                 </div>
 
+                <!-- Loyalty Points Card -->
+                <div class="loyalty-card" onclick="navigateTo('loyalty')">
+                    <div class="loyalty-info">
+                        <i class="fas fa-gem"></i>
+                        <div>
+                            <span id="userPointsDisplay">0</span> points
+                            <small id="userTierDisplay">Bronze Tier</small>
+                        </div>
+                    </div>
+                    <i class="fas fa-chevron-right"></i>
+                </div>
+
                 <!-- Quick Actions -->
                 <div class="quick-actions">
-                    <div class="quick-card" onclick="navigateToPage('relocate')">
+                    <div class="quick-card" onclick="navigateTo('relocate')">
                         <i class="fas fa-truck"></i>
                         <span>New Move</span>
                     </div>
-                    <div class="quick-card" onclick="navigateToPage('bookings')">
+                    <div class="quick-card" onclick="navigateTo('bookings')">
                         <i class="fas fa-list"></i>
                         <span>My Moves</span>
                     </div>
-                    <div class="quick-card" onclick="callSupport()">
+                    <div class="quick-card" onclick="openChatSupport()">
                         <i class="fas fa-headset"></i>
                         <span>Support</span>
+                    </div>
+                    <div class="quick-card" onclick="showPriceCalculator()">
+                        <i class="fas fa-calculator"></i>
+                        <span>Quote</span>
+                    </div>
+                </div>
+
+                <!-- Price Calculator Modal -->
+                <div id="priceCalculatorModal" class="modal" style="display: none;">
+                    <div class="modal-content">
+                        <span class="close" onclick="closePriceCalculator()">&times;</span>
+                        <h3>Quick Price Estimate</h3>
+                        <div class="form-group">
+                            <label>Distance (km)</label>
+                            <input type="number" id="calcDistance" value="10">
+                        </div>
+                        <div class="form-group">
+                            <label>Number of Rooms</label>
+                            <input type="number" id="calcRooms" value="2">
+                        </div>
+                        <div class="form-group">
+                            <label>Floor Number</label>
+                            <input type="number" id="calcFloor" value="1">
+                        </div>
+                        <div class="form-group">
+                            <label>
+                                <input type="checkbox" id="calcElevator"> Has Elevator
+                            </label>
+                        </div>
+                        <div class="form-group">
+                            <label>Package Type</label>
+                            <select id="calcPackage">
+                                <option value="basic">Basic</option>
+                                <option value="gold">Gold</option>
+                                <option value="platinum">Platinum</option>
+                            </select>
+                        </div>
+                        <button class="btn-submit" onclick="calculateAndShowPrice()">Calculate</button>
+                        <div id="priceResult" class="price-result"></div>
                     </div>
                 </div>
 
@@ -166,17 +221,17 @@
                 <div class="section">
                     <h4>Our Packages</h4>
                     <div class="packages-scroll">
-                        <div class="package-mini basic">
+                        <div class="package-mini basic" onclick="selectPackage('basic')">
                             <h5>Basic</h5>
                             <p class="price">RS5000</p>
                             <small>2 labourers • Small truck</small>
                         </div>
-                        <div class="package-mini gold">
+                        <div class="package-mini gold" onclick="selectPackage('gold')">
                             <h5>Gold</h5>
                             <p class="price">RS10000</p>
                             <small>4 labourers • Medium truck</small>
                         </div>
-                        <div class="package-mini platinum">
+                        <div class="package-mini platinum" onclick="selectPackage('platinum')">
                             <h5>Platinum</h5>
                             <p class="price">RS20000</p>
                             <small>6 labourers • Large truck</small>
@@ -184,30 +239,11 @@
                     </div>
                 </div>
 
-                <!-- Additional Services -->
+                <!-- Home Services (Quick Access Icons) -->
                 <div class="section">
                     <h4>Additional Services</h4>
-                    <div class="services-scroll">
-                        <div class="service-mini">
-                            <i class="fas fa-wrench"></i>
-                            <span>Plumber</span>
-                        </div>
-                        <div class="service-mini">
-                            <i class="fas fa-bolt"></i>
-                            <span>Electrician</span>
-                        </div>
-                        <div class="service-mini">
-                            <i class="fas fa-hammer"></i>
-                            <span>Carpenter</span>
-                        </div>
-                        <div class="service-mini">
-                            <i class="fas fa-snowplow"></i>
-                            <span>AC Tech</span>
-                        </div>
-                        <div class="service-mini">
-                            <i class="fas fa-broom"></i>
-                            <span>Cleaner</span>
-                        </div>
+                    <div id="homeServicesList" class="services-scroll">
+                        <!-- Services will be loaded here dynamically -->
                     </div>
                 </div>
 
@@ -223,14 +259,13 @@
             <!-- Relocate Page -->
             <div id="relocatePage" class="page">
                 <div class="page-header">
-                    <button class="back-nav" onclick="navigateToPage('home')">
+                    <button class="back-nav" onclick="navigateTo('home')">
                         <i class="fas fa-arrow-left"></i>
                     </button>
                     <h3>Book Relocation</h3>
                 </div>
                 
                 <form id="relocationForm" class="relocation-form">
-                    <!-- Relocation Type -->
                     <div class="form-section">
                         <label>Relocation Type *</label>
                         <div class="option-group">
@@ -252,7 +287,6 @@
                         </div>
                     </div>
 
-                    <!-- Package Selection -->
                     <div class="form-section">
                         <label>Select Package *</label>
                         <select id="packageSelect" required>
@@ -260,41 +294,50 @@
                         </select>
                     </div>
 
-                    <!-- Labor Count -->
                     <div class="form-section">
                         <label>Number of Labourers *</label>
                         <input type="number" id="laborCount" min="1" max="10" value="2" required>
                     </div>
 
-                    <!-- Vehicle Size Selection -->
-<div class="form-section">
-    <label>Vehicle Size *</label>
-    <input type="hidden" id="selectedVehicleSize" value="">
-    <div id="vehicleSizeOptions" class="vehicle-size-group">
-        <!-- Dynamic vehicle size options will be added here -->
-    </div>
-</div>
+                    <div class="form-section">
+                        <label>Vehicle Size *</label>
+                        <div class="vehicle-size-group" id="vehicleSizeOptions">
+                            <div class="vehicle-size-option" onclick="selectVehicle('small', this)">
+                                <i class="fas fa-truck"></i>
+                                <span>Small Truck</span>
+                                <small>Up to 500kg</small>
+                            </div>
+                            <div class="vehicle-size-option" onclick="selectVehicle('medium', this)">
+                                <i class="fas fa-truck-moving"></i>
+                                <span>Medium Truck</span>
+                                <small>500kg - 1500kg</small>
+                            </div>
+                            <div class="vehicle-size-option" onclick="selectVehicle('large', this)">
+                                <i class="fas fa-trailer"></i>
+                                <span>Large Truck</span>
+                                <small>1500kg+</small>
+                            </div>
+                        </div>
+                        <input type="hidden" id="selectedVehicleSize">
+                    </div>
 
-                    <!-- Additional Services -->
+                    <!-- Additional Services with Checkboxes (Relocate Page Only) -->
                     <div class="form-section">
                         <label>Additional Services</label>
-                        <div id="additionalServicesList" class="checkbox-group">
-                            <!-- Dynamic checkboxes will be added here -->
+                        <div id="additionalServicesList" class="additional-services-grid">
+                            <!-- Dynamic service cards will be added here -->
                         </div>
                     </div>
 
-                    <!-- Media Upload -->
                     <div class="form-section">
-                        <label>Upload Pictures of Items</label>
-                        <input type="file" id="itemPictures" accept="image/*" multiple>
+                        <label>Promo Code</label>
+                        <div class="promo-input-group">
+                            <input type="text" id="promoCodeInput" placeholder="Enter promo code">
+                            <button type="button" onclick="applyPromoCodeToBooking()">Apply</button>
+                        </div>
+                        <div id="promoDiscountDisplay" class="promo-discount"></div>
                     </div>
 
-                    <div class="form-section">
-                        <label>Upload Videos of Items</label>
-                        <input type="file" id="itemVideos" accept="video/*" multiple>
-                    </div>
-
-                    <!-- Addresses -->
                     <div class="form-section">
                         <label>Pickup Address *</label>
                         <textarea id="pickupAddress" rows="2" required></textarea>
@@ -305,7 +348,6 @@
                         <textarea id="dropoffAddress" rows="2" required></textarea>
                     </div>
 
-                    <!-- Date and Time -->
                     <div class="form-row">
                         <div class="form-section">
                             <label>Date *</label>
@@ -315,6 +357,12 @@
                             <label>Time *</label>
                             <input type="time" id="bookingTime" required>
                         </div>
+                    </div>
+
+                    <div id="priceBreakdown" class="price-breakdown" style="display: none;">
+                        <h4>Price Breakdown</h4>
+                        <div id="breakdownContent"></div>
+                        <div class="total-price" id="totalPriceDisplay">Total: RS0</div>
                     </div>
 
                     <button type="submit" class="btn-book">
@@ -327,9 +375,127 @@
             <div id="bookingsPage" class="page">
                 <div class="page-header">
                     <h3>My Bookings</h3>
+                    <button class="refresh-btn" onclick="loadUserBookings()">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
                 </div>
                 <div id="bookingsList" class="bookings-list">
                     <p class="empty-state">No bookings found</p>
+                </div>
+            </div>
+
+           <!-- Inventory Page -->
+<div id="inventoryPage" class="page">
+    <div class="page-header">
+        <button class="back-nav" onclick="navigateTo('home')">
+            <i class="fas fa-arrow-left"></i>
+        </button>
+        <h3>Digital Inventory</h3>
+    </div>
+    
+    <div class="inventory-container">
+        <div class="add-item-card">
+            <h4><i class="fas fa-plus-circle"></i> Add Item to Inventory</h4>
+            <div class="input-group">
+                <label>Room Name</label>
+                <select id="roomName">
+                    <option value="Living Room">Living Room</option>
+                    <option value="Bedroom 1">Bedroom 1</option>
+                    <option value="Bedroom 2">Bedroom 2</option>
+                    <option value="Kitchen">Kitchen</option>
+                    <option value="Dining Room">Dining Room</option>
+                    <option value="Office">Office</option>
+                    <option value="Storage">Storage</option>
+                </select>
+            </div>
+            <div class="input-group">
+                <label>Item Name</label>
+                <input type="text" id="itemName" placeholder="e.g., Sofa, Bed, Table">
+            </div>
+            <div class="checkbox-group">
+                <input type="checkbox" id="isFragile">
+                <label for="isFragile">This item is fragile</label>
+            </div>
+            <div class="input-group">
+                <label>Special Handling Instructions</label>
+                <textarea id="specialHandling" placeholder="Any special instructions..."></textarea>
+            </div>
+            <button class="btn-add-item" onclick="addInventoryItem()">
+                <i class="fas fa-plus"></i> Add Item
+            </button>
+        </div>
+
+        <div class="inventory-list">
+            <h4><i class="fas fa-boxes"></i> Your Items</h4>
+            <div id="itemsContainer" class="items-container"></div>
+        </div>
+    </div>
+</div>
+
+            <!-- Loyalty Page -->
+            <div id="loyaltyPage" class="page">
+                <div class="page-header">
+                    <button class="back-nav" onclick="navigateTo('profile')">
+                        <i class="fas fa-arrow-left"></i>
+                    </button>
+                    <h3>Loyalty Program</h3>
+                </div>
+                
+                <div class="loyalty-container">
+                    <div class="points-card">
+                        <i class="fas fa-gem"></i>
+                        <div class="points-info">
+                            <h3 id="loyaltyPoints">0</h3>
+                            <p>Loyalty Points</p>
+                        </div>
+                        <div class="tier-badge" id="loyaltyTier">Bronze</div>
+                    </div>
+                    
+                    <div class="progress-section">
+                        <h4>Next Tier Progress</h4>
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="tierProgress" style="width: 0%"></div>
+                        </div>
+                        <p id="nextTierInfo">Earn 10000 points to reach Silver</p>
+                    </div>
+                    
+                    <div class="referral-section">
+                        <h4>Refer & Earn</h4>
+                        <p>Share your referral code and earn <strong>500 points</strong> for each friend who books!</p>
+                        <div class="referral-code">
+                            <input type="text" id="referralCode" readonly>
+                            <button onclick="copyReferralCode()">Copy</button>
+                        </div>
+                        <button class="btn-share" onclick="shareReferral()">
+                            <i class="fas fa-share-alt"></i> Share
+                        </button>
+                    </div>
+                    
+                    <div class="tier-benefits">
+                        <h4>Tier Benefits</h4>
+                        <div class="benefits-list">
+                            <div class="benefit bronze">
+                                <h5>Bronze</h5>
+                                <p>5% off on next booking</p>
+                                <small>0 - 9,999 points</small>
+                            </div>
+                            <div class="benefit silver">
+                                <h5>Silver</h5>
+                                <p>10% off • Priority support</p>
+                                <small>10,000 - 24,999 points</small>
+                            </div>
+                            <div class="benefit gold">
+                                <h5>Gold</h5>
+                                <p>15% off • Free packing</p>
+                                <small>25,000 - 49,999 points</small>
+                            </div>
+                            <div class="benefit platinum">
+                                <h5>Platinum</h5>
+                                <p>20% off • Free insurance</p>
+                                <small>50,000+ points</small>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -338,11 +504,26 @@
                 <div class="page-header">
                     <h3>My Profile</h3>
                 </div>
-                <div class="profile-card" id="profileInfo">
-                    <!-- Dynamic profile info -->
-                </div>
+                <div class="profile-card" id="profileInfo"></div>
                 <button class="btn-logout" onclick="logout()">
                     <i class="fas fa-sign-out-alt"></i> Logout
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chat Support Modal -->
+    <div id="chatModal" class="modal">
+        <div class="modal-content chat-modal">
+            <span class="close" onclick="closeChatModal()">&times;</span>
+            <h3>Support Chat</h3>
+            <div class="chat-messages" id="chatMessagesList">
+                <div class="message system">Welcome to ShiftMates Support! How can we help you?</div>
+            </div>
+            <div class="chat-input-area">
+                <input type="text" id="chatMessageInput" placeholder="Type your message...">
+                <button onclick="sendSupportMessage()">
+                    <i class="fas fa-paper-plane"></i>
                 </button>
             </div>
         </div>

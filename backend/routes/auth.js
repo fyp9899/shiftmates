@@ -7,22 +7,18 @@ const router = express.Router();
 router.post('/signup', async (req, res) => {
     const { firstname, lastname, email, contact_number, address, postal_code, password, cnic, area, city } = req.body;
     
-    // Validate required fields
     if (!firstname || !lastname || !email || !contact_number || !address || !password || !cnic || !city) {
         return res.status(400).json({ error: 'All required fields must be filled' });
     }
     
     try {
-        // Check if user exists
         const [existing] = await db.query('SELECT * FROM users WHERE email = ? OR cnic = ?', [email, cnic]);
         if (existing.length > 0) {
             return res.status(400).json({ error: 'User with this email or CNIC already exists' });
         }
         
-        // Hash password
         const hashedPassword = await bcrypt.hash(password, 10);
         
-        // Insert user
         const [result] = await db.query(
             'INSERT INTO users (firstname, lastname, email, contact_number, address, postal_code, password, cnic, area, city) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
             [firstname, lastname, email, contact_number, address, postal_code || null, hashedPassword, cnic, area || null, city]
@@ -61,7 +57,10 @@ router.post('/login', async (req, res) => {
             id: user.id,
             firstname: user.firstname,
             lastname: user.lastname,
-            email: user.email
+            email: user.email,
+            contact_number: user.contact_number,
+            address: user.address,
+            city: user.city
         };
         
         res.json({ message: 'Login successful', user: req.session.user });
